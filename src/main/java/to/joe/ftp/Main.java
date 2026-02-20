@@ -4,6 +4,9 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -11,10 +14,12 @@ import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 
 import to.joe.ftp.config.Config;
+import to.joe.ftp.config.FTPHost;
+import to.joe.ftp.ftp.FTP;
 
 public class Main {
 
-	public static void main(String[] args) throws JsonSyntaxException, JsonIOException, IOException {
+	public static void main(String[] args) throws JsonSyntaxException, JsonIOException, IOException, URISyntaxException {
 		
 		/*
 		 * Check to see if the config file exists.
@@ -34,6 +39,14 @@ public class Main {
 			writer.close();
 			System.out.println("No configuration found. Writing default configuration and exiting.");
 			System.exit(0);
+		}
+		
+		List<FTP> ftpThreads = new ArrayList<FTP>();
+		
+		for (FTPHost ftpHost : config.ftpHosts) {
+			FTP ftpThread = new FTP(ftpHost);
+			ftpThreads.add(ftpThread);
+			ftpThread.start();
 		}
 	}
 

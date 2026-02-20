@@ -8,6 +8,8 @@ import java.util.List;
  */
 public class LocalHost {
 	
+	public String action = "copy"; // Copy or move.
+	
 	public List<Fetcher> fetchers = new ArrayList<Fetcher>();
 	
 	public LocalHost() {

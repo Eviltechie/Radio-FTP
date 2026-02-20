@@ -11,10 +11,15 @@ public class FTPHost {
 	public String host = "localhost";
 	public int port = 21;
 	
+	public String username = "anonymous";
+	public String password = "";
+	
 	/**
 	 * Re-scan delay, in seconds.
 	 */
 	public int scanDelay = 30;
+	
+	public String action = "copy"; // Copy or move.
 	
 	public List<Fetcher> fetchers = new ArrayList<Fetcher>();
 	
