@@ -9,11 +9,16 @@ import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Instant;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPCmd;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
 
@@ -52,6 +57,7 @@ public class FTP extends Thread {
 			
 			client.login(config.username, config.password);
 			client.enterLocalPassiveMode();
+			client.features();
 			printLog(client);
 		} catch (SocketException e) {
 			// TODO Auto-generated catch block
@@ -121,25 +127,74 @@ public class FTP extends Thread {
 	@Override
 	public void run() {
 		try {
-			PreparedStatement ps = connection.prepareStatement("INSERT INTO files(host, fetcher, file, size, modified) VALUES(?, ?, ?, ?, ?) ON CONFLICT (host, fetcher, file) DO UPDATE SET size=excluded.size, modified=excluded.modified");
-			ps.setString(1, config.host);
+			PreparedStatement psUpsert = connection.prepareStatement("INSERT INTO files(host, fetcher, file, size, modified) VALUES(?, ?, ?, ?, ?) ON CONFLICT (host, fetcher, file) DO UPDATE SET size=excluded.size, modified=excluded.modified");
+			psUpsert.setString(1, config.host);
+			
+			PreparedStatement psSelect = connection.prepareStatement("SELECT size, modified FROM files WHERE host = ? AND fetcher = ? AND file = ?");
+			psSelect.setString(1, config.host);
+			
 			while (!interrupted()) {
 				for (Fetcher fetcher : config.fetchers) {
 					getFTPClient().changeWorkingDirectory(fetcher.sourcePath);
-					FTPFile[] files = getFTPClient().listFiles();
-					System.out.println(String.format("Directory: %s", fetcher.sourcePath));
-					ps.setString(2, fetcher.sourcePath);
+					
+					FTPFile[] files;
+					if (getFTPClient().hasFeature(FTPCmd.MLSD)) { // If possible, we try to use MLSD to list the directory. If not, we fall back to regular LIST.
+						files = getFTPClient().mlistDir();
+					} else {
+						files = getFTPClient().listFiles();
+					}
+					
+					System.out.println(String.format("Directory: %s Pattern: %s", fetcher.sourcePath, fetcher.sourcePattern));
+					
+					psUpsert.setString(2, fetcher.name);
+					psSelect.setString(2, fetcher.name);
+					
+					Pattern pattern = Pattern.compile(fetcher.sourcePattern);
+					
 					for (FTPFile file : files) {
 						if (file.isFile()) {
-							ps.setString(3, file.getName());
-							ps.setLong(4, file.getSize());
-							ps.setString(5, file.getTimestampInstant().toString());
-							System.out.println(file.getTimestampInstant() + " " + file.getName() + " " + file.getSize());
-							ps.executeUpdate();
+							Matcher matcher = pattern.matcher(file.getName());
+							if (matcher.matches()) {
+								Instant timestamp;
+								if (!getFTPClient().hasFeature(FTPCmd.MLSD) && getFTPClient().hasFeature(FTPCmd.MDTM)) { // TODO Warn user if server doesn't support MDTM or another way to get proper timestamp
+									timestamp = getFTPClient().mdtmInstant(file.getName());
+								} else {
+									timestamp = file.getTimestampInstant();
+								}
+								
+								psUpsert.setString(3, file.getName());
+								psUpsert.setLong(4, file.getSize());
+								psUpsert.setString(5, timestamp.toString());
+								
+								psSelect.setString(3, file.getName());
+								ResultSet rs = psSelect.executeQuery();
+								
+								System.out.print(timestamp + " " + file.getName() + " " + file.getSize() + " ");
+								
+								if (rs.next()) { // If row exists, we have a record of this file and we compare time stamp/size with what we saw last. If not we assume it's new and queue for download.
+									long storedSize = rs.getLong(1);
+									Instant storedTime = Instant.parse(rs.getString(2));
+									if (timestamp.equals(storedTime) && file.getSize() == storedSize) {
+										System.out.println("Same");
+									} else {
+										System.out.println("Changed!");
+									}
+								} else {
+									// Queue for download
+									System.out.println("New!");
+								}
+								
+								psUpsert.executeUpdate();
+							} else {
+								//System.out.print(file.getTimestampInstant() + " " + file.getName() + " " + file.getSize() + " Ignore");
+							}
+							
+							
 						}
 					}
 					System.out.println();
 				}
+				
 				try {
 					System.out.println(String.format("Sleeping for %s seconds", config.scanDelay));
 					Thread.sleep(config.scanDelay * 1000);
