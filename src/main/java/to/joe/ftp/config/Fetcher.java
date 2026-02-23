@@ -1,5 +1,9 @@
 package to.joe.ftp.config;
 
+import java.util.List;
+
+import to.joe.ftp.ftp.QueuedFile;
+
 /**
  * Represents a "job" of files to download.
  */
@@ -28,5 +32,10 @@ public class Fetcher {
 	 * Downloaded files will be renamed using this pattern.
 	 */
 	public String destinationPattern = "$&";
+	
+	/**
+	 * List of pending files to be re-checked before transferring.
+	 */
+	public transient List<QueuedFile> pendingFiles;
 
 }

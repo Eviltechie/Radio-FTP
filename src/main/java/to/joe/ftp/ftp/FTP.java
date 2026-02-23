@@ -1,5 +1,7 @@
 package to.joe.ftp.ftp;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.SocketException;
 import java.net.URISyntaxException;
@@ -13,6 +15,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -94,6 +97,42 @@ public class FTP extends Thread {
 		}
 	}
 	
+	/**
+	 * Gets files on the server which match our selected source pattern.
+	 * @param fetcher
+	 * @throws IOException
+	 */
+	private List<QueuedFile> getInterestedFiles(Fetcher fetcher) throws IOException {
+		List<QueuedFile> interestedFiles = new ArrayList<QueuedFile>();
+		
+		getFTPClient().changeWorkingDirectory(fetcher.sourcePath);
+		
+		FTPFile[] files;
+		if (getFTPClient().hasFeature(FTPCmd.MLSD)) { // If possible, we try to use MLSD to list the directory. If not, we fall back to regular LIST.
+			files = getFTPClient().mlistDir();
+		} else {
+			files = getFTPClient().listFiles();
+		}
+		
+		Pattern pattern = Pattern.compile(fetcher.sourcePattern);
+		
+		for (FTPFile file : files) {
+			if (file.isFile()) {
+				Matcher matcher = pattern.matcher(file.getName());
+				if (matcher.matches()) {
+					Instant timestamp;
+					if (!getFTPClient().hasFeature(FTPCmd.MLSD) && getFTPClient().hasFeature(FTPCmd.MDTM)) { // TODO Warn user if server doesn't support MDTM or another way to get proper timestamp
+						timestamp = getFTPClient().mdtmInstant(file.getName());
+					} else {
+						timestamp = file.getTimestampInstant();
+					}
+					interestedFiles.add(new QueuedFile(file.getName(), timestamp, file.getSize()));
+				}
+			}
+		}
+		return interestedFiles;
+	}
+	
 	public FTP(FTPHost config) {
 		this.config = config;
 		
@@ -125,7 +164,7 @@ public class FTP extends Thread {
 	}
 	
 	@Override
-	public void run() {
+	public void run() { // TODO More checking for interrupted.
 		try {
 			PreparedStatement psUpsert = connection.prepareStatement("INSERT INTO files(host, fetcher, file, size, modified) VALUES(?, ?, ?, ?, ?) ON CONFLICT (host, fetcher, file) DO UPDATE SET size=excluded.size, modified=excluded.modified");
 			psUpsert.setString(1, config.host);
@@ -135,64 +174,65 @@ public class FTP extends Thread {
 			
 			while (!interrupted()) {
 				for (Fetcher fetcher : config.fetchers) {
-					getFTPClient().changeWorkingDirectory(fetcher.sourcePath);
-					
-					FTPFile[] files;
-					if (getFTPClient().hasFeature(FTPCmd.MLSD)) { // If possible, we try to use MLSD to list the directory. If not, we fall back to regular LIST.
-						files = getFTPClient().mlistDir();
-					} else {
-						files = getFTPClient().listFiles();
-					}
+					fetcher.pendingFiles = new ArrayList<QueuedFile>();
 					
 					System.out.println(String.format("Directory: %s Pattern: %s", fetcher.sourcePath, fetcher.sourcePattern));
 					
 					psUpsert.setString(2, fetcher.name);
 					psSelect.setString(2, fetcher.name);
 					
-					Pattern pattern = Pattern.compile(fetcher.sourcePattern);
+					List<QueuedFile> interestedFiles = getInterestedFiles(fetcher);
 					
-					for (FTPFile file : files) {
-						if (file.isFile()) {
-							Matcher matcher = pattern.matcher(file.getName());
-							if (matcher.matches()) {
-								Instant timestamp;
-								if (!getFTPClient().hasFeature(FTPCmd.MLSD) && getFTPClient().hasFeature(FTPCmd.MDTM)) { // TODO Warn user if server doesn't support MDTM or another way to get proper timestamp
-									timestamp = getFTPClient().mdtmInstant(file.getName());
-								} else {
-									timestamp = file.getTimestampInstant();
-								}
-								
-								psUpsert.setString(3, file.getName());
-								psUpsert.setLong(4, file.getSize());
-								psUpsert.setString(5, timestamp.toString());
-								
-								psSelect.setString(3, file.getName());
-								ResultSet rs = psSelect.executeQuery();
-								
-								System.out.print(timestamp + " " + file.getName() + " " + file.getSize() + " ");
-								
-								if (rs.next()) { // If row exists, we have a record of this file and we compare time stamp/size with what we saw last. If not we assume it's new and queue for download.
-									long storedSize = rs.getLong(1);
-									Instant storedTime = Instant.parse(rs.getString(2));
-									if (timestamp.equals(storedTime) && file.getSize() == storedSize) {
-										System.out.println("Same");
-									} else {
-										System.out.println("Changed!");
-									}
-								} else {
-									// Queue for download
-									System.out.println("New!");
-								}
-								
-								psUpsert.executeUpdate();
+					for (QueuedFile interestedFile : interestedFiles) {
+						psUpsert.setString(3, interestedFile.fileName);
+						psUpsert.setLong(4, interestedFile.fileSize);
+						psUpsert.setString(5, interestedFile.timeStamp.toString());
+						
+						psSelect.setString(3, interestedFile.fileName);
+						ResultSet rs = psSelect.executeQuery();
+						
+						System.out.print(interestedFile.timeStamp + " " + interestedFile.fileName + " " + interestedFile.fileSize + " ");
+						
+						if (rs.next()) { // If row exists, we have a record of this file and we compare time stamp/size with what we saw last. If not we assume it's new and queue for download.
+							long storedSize = rs.getLong(1);
+							Instant storedTime = Instant.parse(rs.getString(2));
+							if (interestedFile.timeStamp.equals(storedTime) && interestedFile.fileSize == storedSize) {
+								System.out.println("Same");
 							} else {
-								//System.out.print(file.getTimestampInstant() + " " + file.getName() + " " + file.getSize() + " Ignore");
+								System.out.println("Changed!");
+								fetcher.pendingFiles.add(interestedFile);
 							}
-							
-							
+						} else {
+							System.out.println("New!");
+							fetcher.pendingFiles.add(interestedFile);
 						}
+						
+						psUpsert.executeUpdate();
 					}
 					System.out.println();
+				}
+				
+				try {
+					System.out.println("Sleeping for 5 seconds before re-checking queued files.");
+					Thread.sleep(5000);
+				} catch (InterruptedException e) {
+					break;
+				}
+				
+				for (Fetcher fetcher : config.fetchers) {
+					List<QueuedFile> interestedFiles = getInterestedFiles(fetcher);
+					
+					for (QueuedFile file : fetcher.pendingFiles) {
+						if (interestedFiles.contains(file)) {
+							System.out.println("Matched " + file.fileName);
+							File f = new File(System.getProperty("java.io.tmpdir"), String.format("%s%s%s%s", "radio-ftp", File.separator, fetcher.name, File.separator));
+							f.mkdirs();
+							f = new File(f, file.fileName);
+							FileOutputStream outputStream = new FileOutputStream(f);
+							getFTPClient().retrieveFile(file.fileName, outputStream);
+							outputStream.close();
+						}
+					}
 				}
 				
 				try {
