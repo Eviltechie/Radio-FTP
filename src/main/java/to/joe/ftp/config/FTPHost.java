@@ -11,6 +11,8 @@ public class FTPHost {
 	public String host = "localhost";
 	public int port = 21;
 	
+	public boolean ftps = false;
+	
 	public String username = "anonymous";
 	public String password = "";
 	

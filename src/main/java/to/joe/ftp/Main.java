@@ -21,6 +21,8 @@ public class Main {
 
 	public static void main(String[] args) throws JsonSyntaxException, JsonIOException, IOException, URISyntaxException {
 		
+		System.setProperty("jdk.tls.client.enableSessionTicketExtension", String.valueOf(false));
+		
 		/*
 		 * Check to see if the config file exists.
 		 * If it doesn't create a default one and exit.

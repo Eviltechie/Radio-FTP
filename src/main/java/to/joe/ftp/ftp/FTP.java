@@ -8,6 +8,8 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -24,6 +26,8 @@ import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPCmd;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
+import org.apache.commons.net.ftp.FTPSClient;
+import org.apache.commons.net.util.TrustManagerUtils;
 
 import to.joe.ftp.Main;
 import to.joe.ftp.config.FTPHost;
@@ -32,7 +36,7 @@ import to.joe.ftp.config.Fetcher;
 public class FTP extends Thread {
 	
 	private FTPHost config;
-	private FTPClient client = new FTPClient();
+	private FTPClient client = new FTPClient(); // FIXME Need to try FTPSClient too...
 	private Connection connection;
 	
 	/**
@@ -45,6 +49,12 @@ public class FTP extends Thread {
 		}
 		
 		try {
+			if (config.ftps) {
+				FTPSClientSSLSessionReuse ftps = new FTPSClientSSLSessionReuse();
+				ftps.setTrustManager(TrustManagerUtils.getAcceptAllTrustManager());
+				client = ftps;
+			}
+			
 			int reply;
 			
 			client.connect(config.host, config.port);
@@ -59,6 +69,11 @@ public class FTP extends Thread {
 			}
 			
 			client.login(config.username, config.password);
+			if (client instanceof FTPSClient) {
+				FTPSClient ftps = (FTPSClient) client;
+				ftps.execPBSZ(0);
+				ftps.execPROT("P");
+			}
 			client.enterLocalPassiveMode();
 			client.features();
 			printLog(client);
@@ -66,6 +81,12 @@ public class FTP extends Thread {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (KeyManagementException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -78,7 +99,7 @@ public class FTP extends Thread {
 			client.logout();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			//e.printStackTrace();
 		} finally {
 			if (client.isConnected()) {
 				try {
@@ -178,16 +199,11 @@ public class FTP extends Thread {
 					
 					System.out.println(String.format("Directory: %s Pattern: %s", fetcher.sourcePath, fetcher.sourcePattern));
 					
-					psUpsert.setString(2, fetcher.name);
 					psSelect.setString(2, fetcher.name);
 					
 					List<QueuedFile> interestedFiles = getInterestedFiles(fetcher);
 					
 					for (QueuedFile interestedFile : interestedFiles) {
-						psUpsert.setString(3, interestedFile.fileName);
-						psUpsert.setLong(4, interestedFile.fileSize);
-						psUpsert.setString(5, interestedFile.timeStamp.toString());
-						
 						psSelect.setString(3, interestedFile.fileName);
 						ResultSet rs = psSelect.executeQuery();
 						
@@ -206,31 +222,37 @@ public class FTP extends Thread {
 							System.out.println("New!");
 							fetcher.pendingFiles.add(interestedFile);
 						}
-						
-						psUpsert.executeUpdate();
 					}
 					System.out.println();
 				}
 				
 				try {
 					System.out.println("Sleeping for 5 seconds before re-checking queued files.");
-					Thread.sleep(5000);
+					Thread.sleep(10000); // FIXME
 				} catch (InterruptedException e) {
 					break;
 				}
 				
 				for (Fetcher fetcher : config.fetchers) {
+					psUpsert.setString(2, fetcher.name);
 					List<QueuedFile> interestedFiles = getInterestedFiles(fetcher);
 					
 					for (QueuedFile file : fetcher.pendingFiles) {
 						if (interestedFiles.contains(file)) {
 							System.out.println("Matched " + file.fileName);
+							
+							psUpsert.setString(3, file.fileName);
+							psUpsert.setLong(4, file.fileSize);
+							psUpsert.setString(5, file.timeStamp.toString());
+							
 							File f = new File(System.getProperty("java.io.tmpdir"), String.format("%s%s%s%s", "radio-ftp", File.separator, fetcher.name, File.separator));
 							f.mkdirs();
 							f = new File(f, file.fileName);
 							FileOutputStream outputStream = new FileOutputStream(f);
-							getFTPClient().retrieveFile(file.fileName, outputStream);
+							getFTPClient().retrieveFile(file.fileName, outputStream); // TODO Catch exception here
 							outputStream.close();
+							
+							psUpsert.executeUpdate();
 						}
 					}
 				}
@@ -251,6 +273,7 @@ public class FTP extends Thread {
 		}
 		
 		closeFTPClient();
+		// TODO connection.close() ?
 	}
 
 }
