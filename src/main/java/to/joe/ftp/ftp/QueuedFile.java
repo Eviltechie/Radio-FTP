@@ -1,17 +1,20 @@
 package to.joe.ftp.ftp;
 
 import java.time.Instant;
+import java.util.regex.Matcher;
 
 public class QueuedFile {
 	
 	public String fileName;
 	public Instant timeStamp;
 	public long fileSize;
+	public Matcher matcher;
 	
-	public QueuedFile(String fileName, Instant timeStamp, long fileSize) {
+	public QueuedFile(String fileName, Instant timeStamp, long fileSize, Matcher matcher) {
 		this.fileName = fileName;
 		this.timeStamp = timeStamp;
 		this.fileSize = fileSize;
+		this.matcher = matcher;
 	}
 	
 	@Override

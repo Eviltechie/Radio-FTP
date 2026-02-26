@@ -12,7 +12,7 @@
 | Raw | Escaped | Example | Meaning |
 |---|---|---|---|
 | SH$1.wav | SH$1.wav | SH12345.wav | Prepends SH to the first capture group. |
-| $& | $& | any thing.wav | Returns the file unchanged. |
+| $0 | $0 | any thing.wav | Returns the file unchanged. |
 
 # FTPS Nonsense
 

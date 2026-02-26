@@ -8,6 +8,7 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -139,7 +140,7 @@ public class FTP extends Thread {
 					} else {
 						timestamp = file.getTimestampInstant();
 					}
-					interestedFiles.add(new QueuedFile(file.getName(), timestamp, file.getSize()));
+					interestedFiles.add(new QueuedFile(file.getName(), timestamp, file.getSize(), matcher));
 				}
 			}
 		}
@@ -229,20 +230,29 @@ public class FTP extends Thread {
 					psUpsert.setString(2, fetcher.name);
 					List<QueuedFile> interestedFiles = getInterestedFiles(fetcher);
 					
-					for (QueuedFile file : fetcher.pendingFiles) {
-						if (interestedFiles.contains(file)) {
-							System.out.println("Matched " + file.fileName);
+					for (QueuedFile pendingFile : fetcher.pendingFiles) {
+						if (interestedFiles.contains(pendingFile)) {
+							System.out.println("Matched " + pendingFile.fileName);
 							
-							psUpsert.setString(3, file.fileName);
-							psUpsert.setLong(4, file.fileSize);
-							psUpsert.setString(5, file.timeStamp.toString());
+							psUpsert.setString(3, pendingFile.fileName);
+							psUpsert.setLong(4, pendingFile.fileSize);
+							psUpsert.setString(5, pendingFile.timeStamp.toString());
 							
-							File f = new File(System.getProperty("java.io.tmpdir"), String.format("%s%s%s%s", "radio-ftp", File.separator, fetcher.name, File.separator));
-							f.mkdirs();
-							f = new File(f, file.fileName);
-							FileOutputStream outputStream = new FileOutputStream(f);
-							getFTPClient().retrieveFile(file.fileName, outputStream); // TODO Catch exception here
+							File tempFolder = new File(System.getProperty("java.io.tmpdir"), String.format("%s%s%s%s", "radio-ftp", File.separator, fetcher.name, File.separator));
+							tempFolder.mkdirs();
+							File tempDestination = new File(tempFolder, pendingFile.fileName);
+							FileOutputStream outputStream = new FileOutputStream(tempDestination);
+							System.out.println(String.format("Downloading file to %s", tempDestination.getAbsolutePath()));
+							getFTPClient().retrieveFile(pendingFile.fileName, outputStream); // TODO Catch exception here
 							outputStream.close();
+							
+							File destinationFolder = new File(fetcher.destinationPath);
+							String destinationName = pendingFile.matcher.replaceFirst(fetcher.destinationPattern);
+							File destination = new File(destinationFolder, destinationName);
+							
+							System.out.println(String.format("Moving file to %s", destination.getAbsolutePath()));
+							
+							Files.move(tempDestination.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
 							
 							psUpsert.executeUpdate();
 						}
