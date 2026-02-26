@@ -1,56 +1,47 @@
 package to.joe.ftp.ftp;
 
 import java.io.IOException;
-import java.io.Reader;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.Socket;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.Optional;
+import java.util.Locale;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSessionContext;
+import javax.net.ssl.SSLSocket;
 
 import org.apache.commons.net.ftp.FTPSClient;
-import org.apache.commons.net.util.TrustManagerUtils;
-import org.bouncycastle.jsse.BCExtendedSSLSession;
-import org.bouncycastle.jsse.BCSSLSocket;
-import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
 
 public class FTPSClientSSLSessionReuse extends FTPSClient {
 	
-	private static SSLContext createSSLContext() throws NoSuchAlgorithmException, KeyManagementException {
-		SSLContext context = SSLContext.getInstance("TLS", new BouncyCastleJsseProvider());
-		TrustManager trustManager = TrustManagerUtils.getValidateServerCertificateTrustManager();
-		
-		context.init(null, new TrustManager[] {trustManager}, new SecureRandom());
-		return context;
-	}
-	
-	private Optional<BCExtendedSSLSession> sessionToResume = Optional.empty();
-	
-	public FTPSClientSSLSessionReuse() throws KeyManagementException, NoSuchAlgorithmException {
-		super(false, createSSLContext());
-		
-		setEnabledProtocols(new String[] { "TLSv1.2" });
-	}
-	
 	@Override
-	protected void _connectAction_(Reader socketIsReader) throws IOException {
-		super._connectAction_(socketIsReader);
-		
-		if (_socket_ instanceof BCSSLSocket) {
-			BCSSLSocket sslSocket = (BCSSLSocket) _socket_;
-			sessionToResume = Optional.ofNullable(sslSocket.getBCSession());
-		}
-	}
-	
-	@Override
-	protected void _prepareDataSocket_(Socket socket) throws IOException {
-		if (socket instanceof BCSSLSocket) {
-			BCSSLSocket sslSocket = (BCSSLSocket) socket;
-			sessionToResume.ifPresent(sslSocket::setBCSessionToResume);
-		}
+	protected void _prepareDataSocket_(final Socket socket) throws IOException {
+	    if (socket instanceof SSLSocket) {
+	        // Control socket is SSL
+	        final SSLSession session = ((SSLSocket) _socket_).getSession();
+	        if (session.isValid()) {
+	            final SSLSessionContext context = session.getSessionContext();
+	            try {
+	                final Field sessionHostPortCache = context.getClass().getDeclaredField("sessionHostPortCache");
+	                sessionHostPortCache.setAccessible(true);
+	                final Object cache = sessionHostPortCache.get(context);
+	                final Method method = cache.getClass().getDeclaredMethod("put", Object.class, Object.class);
+	                method.setAccessible(true);
+	                method.invoke(cache, String
+	                        .format("%s:%s", socket.getInetAddress().getHostName(), String.valueOf(socket.getPort()))
+	                        .toLowerCase(Locale.ROOT), session);
+	                method.invoke(cache, String
+	                        .format("%s:%s", socket.getInetAddress().getHostAddress(), String.valueOf(socket.getPort()))
+	                        .toLowerCase(Locale.ROOT), session);
+	            } catch (NoSuchFieldException e) {
+	                throw new IOException(e);
+	            } catch (Exception e) {
+	                throw new IOException(e);
+	            }
+	        } else {
+	            throw new IOException("Invalid SSL Session");
+	        }
+	    }
 	}
 
 }

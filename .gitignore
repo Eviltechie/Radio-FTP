@@ -1,0 +1,7 @@
+/target/
+*.db
+*.json
+*.bak
+.settings
+.project
+.classpath

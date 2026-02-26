@@ -21,7 +21,16 @@ public class Main {
 
 	public static void main(String[] args) throws JsonSyntaxException, JsonIOException, IOException, URISyntaxException {
 		
+		/*
+		 * --enable-native-access=ALL-UNNAMED
+		 * --add-opens=java.base/sun.security.util=ALL-UNNAMED
+		 * --add-opens=java.base/sun.security.ssl=ALL-UNNAMED
+		 */
+		
 		System.setProperty("jdk.tls.client.enableSessionTicketExtension", String.valueOf(false));
+		System.setProperty("jdk.tls.client.protocols", "TLSv1.2");
+		System.setProperty("jdk.tls.allowLegacyResumption", String.valueOf(true));
+		System.setProperty("jdk.tls.useExtendedMasterSecret", String.valueOf(false));
 		
 		/*
 		 * Check to see if the config file exists.

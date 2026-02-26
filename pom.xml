@@ -26,6 +26,12 @@
       <artifactId>sqlite-jdbc</artifactId>
       <version>3.51.2.0</version>
     </dependency>
+    
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bctls-jdk18on</artifactId>
+      <version>1.83</version>
+    </dependency>
   </dependencies>
   
   <build>
