@@ -31,7 +31,7 @@ public class Fetcher {
 	/**
 	 * Downloaded files will be renamed using this pattern.
 	 */
-	public String destinationPattern = "$&";
+	public String destinationPattern = "$0";
 	
 	/**
 	 * List of pending files to be re-checked before transferring.

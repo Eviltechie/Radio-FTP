@@ -52,6 +52,7 @@ public class Main {
 			System.exit(0);
 		}
 		
+		// Start our FTP threads.
 		List<FTP> ftpThreads = new ArrayList<FTP>();
 		
 		for (FTPHost ftpHost : config.ftpHosts) {
@@ -59,6 +60,8 @@ public class Main {
 			ftpThreads.add(ftpThread);
 			ftpThread.start();
 		}
+		
+		// TODO Start our local thread(s)
 	}
 
 }
