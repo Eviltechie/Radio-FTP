@@ -12,6 +12,9 @@ import javax.net.ssl.SSLSocket;
 
 import org.apache.commons.net.ftp.FTPSClient;
 
+/**
+ * Modified version of {@link FTPSClient} to allow for session reuse, as required by most FTPd these days. See "FTPS Nonsense" section in README for more details.
+ */
 public class FTPSClientSSLSessionReuse extends FTPSClient {
 	
 	@Override

@@ -56,9 +56,14 @@ public class Main {
 		List<FTP> ftpThreads = new ArrayList<FTP>();
 		
 		for (FTPHost ftpHost : config.ftpHosts) {
-			FTP ftpThread = new FTP(ftpHost);
-			ftpThreads.add(ftpThread);
-			ftpThread.start();
+			try {
+				FTP ftpThread = new FTP(ftpHost);
+				ftpThreads.add(ftpThread);
+				ftpThread.start();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 		// TODO Start our local thread(s)

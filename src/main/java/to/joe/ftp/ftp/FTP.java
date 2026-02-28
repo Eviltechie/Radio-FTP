@@ -3,7 +3,6 @@ package to.joe.ftp.ftp;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.SocketException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,6 +22,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPCmd;
+import org.apache.commons.net.ftp.FTPConnectionClosedException;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
 import org.apache.commons.net.ftp.FTPSClient;
@@ -41,65 +41,58 @@ public class FTP extends Thread {
 	/**
 	 * Attempts to return an active {@link FTPClient} ready for use.
 	 * @return
+	 * @throws IOException 
 	 */
-	private FTPClient getFTPClient() {
+	private FTPClient getFTPClient() throws IOException { // TODO Warn user if server doesn't support MDTM or another way to get proper timestamp
 		if (client.isConnected()) {
 			return client;
 		}
 		
-		try {
-			if (config.ftps) {
-				FTPSClientSSLSessionReuse ftps = new FTPSClientSSLSessionReuse();
-				ftps.setTrustManager(TrustManagerUtils.getAcceptAllTrustManager());
-				client = ftps;
-			}
-			
-			int reply;
-			
-			client.connect(config.host, config.port);
-			System.out.println(String.format("Connected to %s:%s", config.host, config.port));
-			printLog(client);
-			
-			reply = client.getReplyCode();
-			
-			if (!FTPReply.isPositiveCompletion(reply)) {
-				client.disconnect();
-				System.err.println("FTP server refused connection.");
-			}
-			
-			client.login(config.username, config.password);
-			if (client instanceof FTPSClient) {
-				FTPSClient ftps = (FTPSClient) client;
-				ftps.execPBSZ(0);
-				ftps.execPROT("P");
-			}
-			client.enterLocalPassiveMode();
-			client.features();
-			printLog(client);
-		} catch (SocketException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		if (config.ftps) { // If we're doing FTPS, we'll swap to a FTPS client class instead.
+			FTPSClientSSLSessionReuse ftps = new FTPSClientSSLSessionReuse();
+			ftps.setTrustManager(TrustManagerUtils.getAcceptAllTrustManager());
+			client = ftps;
 		}
+		
+		int reply;
+		
+		client.connect(config.host, config.port);
+		System.out.println(String.format("Connected to %s:%s", config.host, config.port));
+		printLog(client);
+		
+		reply = client.getReplyCode();
+		
+		if (!FTPReply.isPositiveCompletion(reply)) {
+			client.disconnect();
+			System.err.println("FTP server refused connection.");
+		}
+		
+		client.login(config.username, config.password);
+		if (client instanceof FTPSClient) {
+			FTPSClient ftps = (FTPSClient) client;
+			ftps.execPBSZ(0);
+			ftps.execPROT("P");
+		}
+		client.enterLocalPassiveMode();
+		client.features();
+		printLog(client);
 		
 		return client;
 	}
 	
-	private void closeFTPClient() {
+	private void ftpLogoutAndDisconnect() {
 		try {
 			client.logout();
+		} catch (FTPConnectionClosedException e) {
+			// Pass, we are closing the connection anyway.
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
-			//e.printStackTrace();
+			e.printStackTrace();
 		} finally {
-			if (client.isConnected()) {
-				try {
-					client.disconnect();
-				} catch (IOException e) {
-					// Pass
-				}
+			try {
+				client.disconnect();
+			} catch (IOException e) {
+				// Pass
 			}
 		}
 	}
@@ -135,7 +128,7 @@ public class FTP extends Thread {
 				Matcher matcher = pattern.matcher(file.getName());
 				if (matcher.matches()) {
 					Instant timestamp;
-					if (!getFTPClient().hasFeature(FTPCmd.MLSD) && getFTPClient().hasFeature(FTPCmd.MDTM)) { // TODO Warn user if server doesn't support MDTM or another way to get proper timestamp
+					if (!getFTPClient().hasFeature(FTPCmd.MLSD) && getFTPClient().hasFeature(FTPCmd.MDTM)) {
 						timestamp = getFTPClient().mdtmInstant(file.getName());
 					} else {
 						timestamp = file.getTimestampInstant();
@@ -147,33 +140,21 @@ public class FTP extends Thread {
 		return interestedFiles;
 	}
 	
-	public FTP(FTPHost config) {
+	public FTP(FTPHost config) throws SQLException, URISyntaxException, IOException {
 		this.config = config;
 		
 		// Connect to the sqlite database for this ftp host, and create the table if it does not already exist.
-		try {
-			connection = DriverManager.getConnection(String.format("jdbc:sqlite:%s.db", config.host));
-			Statement statement = connection.createStatement();
-			
-			Path resourcePath = Paths.get(Main.class.getClassLoader().getResource("ftp.sql").toURI());
-			List<String> queries = Files.readAllLines(resourcePath);
-			
-			for (String query : queries) {
-				statement.executeUpdate(query);
-			}
-			
-			statement.close();
-			
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (URISyntaxException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		connection = DriverManager.getConnection(String.format("jdbc:sqlite:%s.db", config.host));
+		Statement statement = connection.createStatement();
+		
+		Path resourcePath = Paths.get(Main.class.getClassLoader().getResource("ftp.sql").toURI());
+		List<String> queries = Files.readAllLines(resourcePath);
+		
+		for (String query : queries) {
+			statement.executeUpdate(query);
 		}
+		
+		statement.close();
 
 	}
 	
@@ -221,7 +202,7 @@ public class FTP extends Thread {
 				
 				try {
 					System.out.println("Sleeping for 5 seconds before re-checking queued files.");
-					Thread.sleep(10000); // FIXME
+					Thread.sleep(5000);
 				} catch (InterruptedException e) {
 					break;
 				}
@@ -274,7 +255,7 @@ public class FTP extends Thread {
 			e.printStackTrace();
 		}
 		
-		closeFTPClient();
+		ftpLogoutAndDisconnect();
 		// TODO connection.close() ?
 	}
 
