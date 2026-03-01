@@ -55,7 +55,7 @@ public class Main {
 		// Start our FTP threads.
 		List<FTP> ftpThreads = new ArrayList<FTP>();
 		
-		for (FTPHost ftpHost : config.ftpHosts) {
+		for (FTPHost ftpHost : config.ftpHosts) { // TODO Make sure we don't have duplicate FTP servers.
 			try {
 				FTP ftpThread = new FTP(ftpHost);
 				ftpThreads.add(ftpThread);

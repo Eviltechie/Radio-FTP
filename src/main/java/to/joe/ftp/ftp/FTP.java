@@ -167,7 +167,7 @@ public class FTP extends Thread {
 			PreparedStatement psSelect = connection.prepareStatement("SELECT size, modified FROM files WHERE host = ? AND fetcher = ? AND file = ?");
 			psSelect.setString(1, config.host);
 			
-			while (!interrupted()) {
+			while (!isInterrupted()) {
 				for (Fetcher fetcher : config.fetchers) {
 					fetcher.pendingFiles = new ArrayList<QueuedFile>();
 					
@@ -196,14 +196,21 @@ public class FTP extends Thread {
 							System.out.println("New!");
 							fetcher.pendingFiles.add(interestedFile);
 						}
+						if (isInterrupted()) {
+							break;
+						}
 					}
 					System.out.println();
+					if (isInterrupted()) {
+						break;
+					}
 				}
 				
 				try {
 					System.out.println("Sleeping for 5 seconds before re-checking queued files.");
 					Thread.sleep(5000);
 				} catch (InterruptedException e) {
+					interrupt();
 					break;
 				}
 				
@@ -237,6 +244,12 @@ public class FTP extends Thread {
 							
 							psUpsert.executeUpdate();
 						}
+						if (isInterrupted()) {
+							break;
+						}
+					}
+					if (isInterrupted()) {
+						break;
 					}
 				}
 				
@@ -244,9 +257,11 @@ public class FTP extends Thread {
 					System.out.println(String.format("Sleeping for %s seconds", config.scanDelay));
 					Thread.sleep(config.scanDelay * 1000);
 				} catch (InterruptedException e) {
-					// Pass
+					interrupt();
+					break;
 				}
 			}
+			connection.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -256,7 +271,6 @@ public class FTP extends Thread {
 		}
 		
 		ftpLogoutAndDisconnect();
-		// TODO connection.close() ?
 	}
 
 }
