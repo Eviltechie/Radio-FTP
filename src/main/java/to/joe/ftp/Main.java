@@ -67,6 +67,28 @@ public class Main {
 		}
 		
 		// TODO Start our local thread(s)
+		
+		final Thread mainThread = Thread.currentThread();
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			@Override
+			public void run() {
+				System.out.println("Shutdown signal received.");
+				for (FTP ftpThread : ftpThreads) {
+					ftpThread.interrupt();
+					try {
+						ftpThread.join();
+					} catch (InterruptedException e) {
+						// Pass
+					}
+				}
+				try {
+					mainThread.join();
+					System.out.println("All threads terminated.");
+				} catch (InterruptedException e) {
+					// Pass
+				}
+			}
+		});
 	}
 
 }

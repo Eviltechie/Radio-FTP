@@ -8,6 +8,7 @@ import java.util.List;
  */
 public class Config {
 	
+	// TODO Add option for working directory other than %TEMP%
 	public List<FTPHost> ftpHosts = new ArrayList<FTPHost>();
 	public LocalHost localHost = new LocalHost();
 	

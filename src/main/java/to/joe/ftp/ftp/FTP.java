@@ -1,8 +1,11 @@
 package to.joe.ftp.ftp;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -147,8 +150,13 @@ public class FTP extends Thread {
 		connection = DriverManager.getConnection(String.format("jdbc:sqlite:%s.db", config.host));
 		Statement statement = connection.createStatement();
 		
-		Path resourcePath = Paths.get(Main.class.getClassLoader().getResource("ftp.sql").toURI());
-		List<String> queries = Files.readAllLines(resourcePath);
+		InputStream is = Main.class.getClassLoader().getResourceAsStream("ftp.sql");
+		InputStreamReader isr = new InputStreamReader(is);
+		BufferedReader br = new BufferedReader(isr);
+		List<String> queries = br.readAllLines();
+		br.close();
+		isr.close();
+		is.close();
 		
 		for (String query : queries) {
 			statement.executeUpdate(query);
@@ -197,68 +205,83 @@ public class FTP extends Thread {
 							fetcher.pendingFiles.add(interestedFile);
 						}
 						if (isInterrupted()) {
+							System.out.println("Exiting out of i1");
 							break;
 						}
 					}
 					System.out.println();
 					if (isInterrupted()) {
+						System.out.println("Exiting out of f1");
 						break;
 					}
 				}
 				
-				try {
-					System.out.println("Sleeping for 5 seconds before re-checking queued files.");
-					Thread.sleep(5000);
-				} catch (InterruptedException e) {
-					interrupt();
-					break;
+				if (!isInterrupted()) {
+					try {
+						System.out.println("Sleeping for 5 seconds before re-checking queued files.");
+						Thread.sleep(5000);
+					} catch (InterruptedException e) {
+						System.out.println("Exiting out of s1");
+						interrupt();
+						break;
+					}
 				}
 				
-				for (Fetcher fetcher : config.fetchers) {
-					psUpsert.setString(2, fetcher.name);
-					List<QueuedFile> interestedFiles = getInterestedFiles(fetcher);
-					
-					for (QueuedFile pendingFile : fetcher.pendingFiles) {
-						if (interestedFiles.contains(pendingFile)) {
-							System.out.println("Matched " + pendingFile.fileName);
-							
-							psUpsert.setString(3, pendingFile.fileName);
-							psUpsert.setLong(4, pendingFile.fileSize);
-							psUpsert.setString(5, pendingFile.timeStamp.toString());
-							
-							File tempFolder = new File(System.getProperty("java.io.tmpdir"), String.format("%s%s%s%s", "radio-ftp", File.separator, fetcher.name, File.separator));
-							tempFolder.mkdirs();
-							File tempDestination = new File(tempFolder, pendingFile.fileName);
-							FileOutputStream outputStream = new FileOutputStream(tempDestination);
-							System.out.println(String.format("Downloading file to %s", tempDestination.getAbsolutePath()));
-							getFTPClient().retrieveFile(pendingFile.fileName, outputStream); // TODO Catch exception here
-							outputStream.close();
-							
-							File destinationFolder = new File(fetcher.destinationPath);
-							String destinationName = pendingFile.matcher.replaceFirst(fetcher.destinationPattern);
-							File destination = new File(destinationFolder, destinationName);
-							
-							System.out.println(String.format("Moving file to %s", destination.getAbsolutePath()));
-							
-							Files.move(tempDestination.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
-							
-							psUpsert.executeUpdate();
+				if (!isInterrupted()) {
+					for (Fetcher fetcher : config.fetchers) {
+						psUpsert.setString(2, fetcher.name);
+						List<QueuedFile> interestedFiles = getInterestedFiles(fetcher);
+						
+						for (QueuedFile pendingFile : fetcher.pendingFiles) {
+							if (interestedFiles.contains(pendingFile)) {
+								System.out.println("Matched " + pendingFile.fileName);
+								
+								psUpsert.setString(3, pendingFile.fileName);
+								psUpsert.setLong(4, pendingFile.fileSize);
+								psUpsert.setString(5, pendingFile.timeStamp.toString());
+								
+								File tempFolder = new File(System.getProperty("java.io.tmpdir"), String.format("%s%s%s%s", "radio-ftp", File.separator, fetcher.name, File.separator));
+								tempFolder.mkdirs();
+								File tempDestination = new File(tempFolder, pendingFile.fileName);
+								FileOutputStream outputStream = new FileOutputStream(tempDestination);
+								System.out.println(String.format("Downloading file to %s", tempDestination.getAbsolutePath()));
+								getFTPClient().retrieveFile(pendingFile.fileName, outputStream); // TODO Catch exception here
+								outputStream.close();
+								
+								File destinationFolder = new File(fetcher.destinationPath);
+								if (!destinationFolder.exists()) {
+									destinationFolder.mkdirs();
+								}
+								String destinationName = pendingFile.matcher.replaceFirst(fetcher.destinationPattern);
+								File destination = new File(destinationFolder, destinationName);
+								
+								System.out.println(String.format("Moving file to %s", destination.getAbsolutePath()));
+								
+								Files.move(tempDestination.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
+								
+								psUpsert.executeUpdate();
+							}
+							if (isInterrupted()) {
+								System.out.println("Exiting out of i2");
+								break;
+							}
 						}
 						if (isInterrupted()) {
+							System.out.println("Exiting out of f2");
 							break;
 						}
 					}
-					if (isInterrupted()) {
-						break;
-					}
 				}
 				
-				try {
-					System.out.println(String.format("Sleeping for %s seconds", config.scanDelay));
-					Thread.sleep(config.scanDelay * 1000);
-				} catch (InterruptedException e) {
-					interrupt();
-					break;
+				if (!isInterrupted()) {
+					try {
+						System.out.println(String.format("Sleeping for %s seconds", config.scanDelay));
+						Thread.sleep(config.scanDelay * 1000);
+					} catch (InterruptedException e) {
+						System.out.println("Exiting out of s2");
+						interrupt();
+						break;
+					}
 				}
 			}
 			connection.close();
@@ -268,9 +291,9 @@ public class FTP extends Thread {
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} finally {
+			ftpLogoutAndDisconnect();
 		}
-		
-		ftpLogoutAndDisconnect();
 	}
 
 }
