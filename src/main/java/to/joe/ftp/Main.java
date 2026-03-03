@@ -8,6 +8,9 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
@@ -32,6 +35,9 @@ public class Main {
 		System.setProperty("jdk.tls.allowLegacyResumption", String.valueOf(true));
 		System.setProperty("jdk.tls.useExtendedMasterSecret", String.valueOf(false));
 		
+		Logger logger = LogManager.getLogger(Main.class.getName());
+		logger.info("Starting up radio-ftp");
+		
 		/*
 		 * Check to see if the config file exists.
 		 * If it doesn't create a default one and exit.
@@ -48,8 +54,8 @@ public class Main {
 			FileWriter writer = new FileWriter(configFile);
 			gson.toJson(config, writer);
 			writer.close();
-			System.out.println("No configuration found. Writing default configuration and exiting.");
-			System.exit(0);
+			logger.fatal("No configuration found. Writing default configuration and exiting.");
+			System.exit(1);
 		}
 		
 		// Start our FTP threads.
@@ -59,6 +65,7 @@ public class Main {
 			try {
 				FTP ftpThread = new FTP(ftpHost);
 				ftpThreads.add(ftpThread);
+				ftpThread.setName(ftpHost.host);
 				ftpThread.start();
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
@@ -72,7 +79,7 @@ public class Main {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
-				System.out.println("Shutdown signal received.");
+				logger.info("Shutdown signal received");
 				for (FTP ftpThread : ftpThreads) {
 					ftpThread.interrupt();
 					try {
@@ -83,7 +90,7 @@ public class Main {
 				}
 				try {
 					mainThread.join();
-					System.out.println("All threads terminated.");
+					logger.info("All threads terminated, goodbye");
 				} catch (InterruptedException e) {
 					// Pass
 				}

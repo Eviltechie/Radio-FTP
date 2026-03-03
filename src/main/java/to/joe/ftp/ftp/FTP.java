@@ -8,8 +8,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -30,6 +28,8 @@ import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
 import org.apache.commons.net.ftp.FTPSClient;
 import org.apache.commons.net.util.TrustManagerUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import to.joe.ftp.Main;
 import to.joe.ftp.config.FTPHost;
@@ -40,16 +40,19 @@ public class FTP extends Thread {
 	private FTPHost config;
 	private FTPClient client = new FTPClient(); // FIXME Need to try FTPSClient too...
 	private Connection connection;
+	private Logger logger = LogManager.getLogger(FTP.class.getName());
 	
 	/**
 	 * Attempts to return an active {@link FTPClient} ready for use.
 	 * @return
 	 * @throws IOException 
 	 */
-	private FTPClient getFTPClient() throws IOException { // TODO Warn user if server doesn't support MDTM or another way to get proper timestamp
+	private FTPClient getFTPClient() throws IOException {
 		if (client.isConnected()) {
 			return client;
 		}
+		
+		logger.info("Establishing FTP connection to {}:{}", config.host, config.port);
 		
 		if (config.ftps) { // If we're doing FTPS, we'll swap to a FTPS client class instead.
 			FTPSClientSSLSessionReuse ftps = new FTPSClientSSLSessionReuse();
@@ -60,14 +63,14 @@ public class FTP extends Thread {
 		int reply;
 		
 		client.connect(config.host, config.port);
-		System.out.println(String.format("Connected to %s:%s", config.host, config.port));
+		logger.info("Connected");
 		printLog(client);
 		
 		reply = client.getReplyCode();
 		
 		if (!FTPReply.isPositiveCompletion(reply)) {
 			client.disconnect();
-			System.err.println("FTP server refused connection.");
+			logger.error("FTP server refused connection.");
 		}
 		
 		client.login(config.username, config.password);
@@ -79,6 +82,9 @@ public class FTP extends Thread {
 		client.enterLocalPassiveMode();
 		client.features();
 		printLog(client);
+		if (!getFTPClient().hasFeature(FTPCmd.MLSD) && !getFTPClient().hasFeature(FTPCmd.MDTM)) {
+			logger.warn("Server does not support accurate timestamps (MLSD or MDTM commands), risk of issues at new year's.");
+		}
 		
 		return client;
 	}
@@ -86,6 +92,7 @@ public class FTP extends Thread {
 	private void ftpLogoutAndDisconnect() {
 		try {
 			client.logout();
+			logger.info("Logged out");
 		} catch (FTPConnectionClosedException e) {
 			// Pass, we are closing the connection anyway.
 		} catch (IOException e) {
@@ -96,6 +103,8 @@ public class FTP extends Thread {
 				client.disconnect();
 			} catch (IOException e) {
 				// Pass
+			} finally {
+				logger.info("Disconnected");
 			}
 		}
 	}
@@ -103,7 +112,7 @@ public class FTP extends Thread {
 	private void printLog(FTPClient ftp) {
 		String[] log = ftp.getReplyStrings();
 		for (String string : log) {
-			System.out.println(string);
+			logger.debug(string);
 		}
 	}
 	
@@ -163,6 +172,8 @@ public class FTP extends Thread {
 		}
 		
 		statement.close();
+		
+		getFTPClient();
 
 	}
 	
@@ -179,7 +190,7 @@ public class FTP extends Thread {
 				for (Fetcher fetcher : config.fetchers) {
 					fetcher.pendingFiles = new ArrayList<QueuedFile>();
 					
-					System.out.println(String.format("Directory: %s Pattern: %s", fetcher.sourcePath, fetcher.sourcePattern));
+					logger.info("Searching directory {} with pattern {}", fetcher.sourcePath, fetcher.sourcePattern);
 					
 					psSelect.setString(2, fetcher.name);
 					
@@ -189,39 +200,36 @@ public class FTP extends Thread {
 						psSelect.setString(3, interestedFile.fileName);
 						ResultSet rs = psSelect.executeQuery();
 						
-						System.out.print(interestedFile.timeStamp + " " + interestedFile.fileName + " " + interestedFile.fileSize + " ");
-						
 						if (rs.next()) { // If row exists, we have a record of this file and we compare time stamp/size with what we saw last. If not we assume it's new and queue for download.
 							long storedSize = rs.getLong(1);
 							Instant storedTime = Instant.parse(rs.getString(2));
 							if (interestedFile.timeStamp.equals(storedTime) && interestedFile.fileSize == storedSize) {
-								System.out.println("Same");
+								logger.info("Ignorning file {} last modified at {} with size {}", interestedFile.fileName, interestedFile.timeStamp, interestedFile.fileSize);
 							} else {
-								System.out.println("Changed!");
+								logger.info("Changed file {} last modified at {} with size {}", interestedFile.fileName, interestedFile.timeStamp, interestedFile.fileSize);
 								fetcher.pendingFiles.add(interestedFile);
 							}
 						} else {
-							System.out.println("New!");
+							logger.info("New file {} last modified at {} with size {}", interestedFile.fileName, interestedFile.timeStamp, interestedFile.fileSize);
 							fetcher.pendingFiles.add(interestedFile);
 						}
 						if (isInterrupted()) {
-							System.out.println("Exiting out of i1");
+							logger.trace("Interrupt signal received, breaking out of interested file loop 1");
 							break;
 						}
 					}
-					System.out.println();
 					if (isInterrupted()) {
-						System.out.println("Exiting out of f1");
+						logger.trace("Interrupt signal received, breaking out of interested fetcher loop 1");
 						break;
 					}
 				}
 				
 				if (!isInterrupted()) {
 					try {
-						System.out.println("Sleeping for 5 seconds before re-checking queued files.");
+						logger.info("Sleeping for 5 seconds before re-checking queued files.");
 						Thread.sleep(5000);
 					} catch (InterruptedException e) {
-						System.out.println("Exiting out of s1");
+						logger.trace("Interrupt signal received, breaking out of sleep 1");
 						interrupt();
 						break;
 					}
@@ -234,7 +242,7 @@ public class FTP extends Thread {
 						
 						for (QueuedFile pendingFile : fetcher.pendingFiles) {
 							if (interestedFiles.contains(pendingFile)) {
-								System.out.println("Matched " + pendingFile.fileName);
+								logger.info("File {} attributes unchanged after re-check", pendingFile.fileName);
 								
 								psUpsert.setString(3, pendingFile.fileName);
 								psUpsert.setLong(4, pendingFile.fileSize);
@@ -244,8 +252,8 @@ public class FTP extends Thread {
 								tempFolder.mkdirs();
 								File tempDestination = new File(tempFolder, pendingFile.fileName);
 								FileOutputStream outputStream = new FileOutputStream(tempDestination);
-								System.out.println(String.format("Downloading file to %s", tempDestination.getAbsolutePath()));
-								getFTPClient().retrieveFile(pendingFile.fileName, outputStream); // TODO Catch exception here
+								logger.info("Downloading file to {}", tempDestination.getAbsolutePath());
+								getFTPClient().retrieveFile(pendingFile.fileName, outputStream); // TODO Catch exception here // TODO Calculate data rate here
 								outputStream.close();
 								
 								File destinationFolder = new File(fetcher.destinationPath);
@@ -255,19 +263,21 @@ public class FTP extends Thread {
 								String destinationName = pendingFile.matcher.replaceFirst(fetcher.destinationPattern);
 								File destination = new File(destinationFolder, destinationName);
 								
-								System.out.println(String.format("Moving file to %s", destination.getAbsolutePath()));
+								logger.info("Moving file to {}", destination.getAbsolutePath());
 								
 								Files.move(tempDestination.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
 								
 								psUpsert.executeUpdate();
+							} else {
+								logger.info("File {} attributes changed after re-check, skipping", pendingFile.fileName);
 							}
 							if (isInterrupted()) {
-								System.out.println("Exiting out of i2");
+								logger.trace("Interrupt signal received, breaking out of interested file loop 2");
 								break;
 							}
 						}
 						if (isInterrupted()) {
-							System.out.println("Exiting out of f2");
+							logger.trace("Interrupt signal received, breaking out of interested fetcher loop 1");
 							break;
 						}
 					}
@@ -275,10 +285,10 @@ public class FTP extends Thread {
 				
 				if (!isInterrupted()) {
 					try {
-						System.out.println(String.format("Sleeping for %s seconds", config.scanDelay));
+						logger.info("Sleeping for {} seconds", config.scanDelay);
 						Thread.sleep(config.scanDelay * 1000);
 					} catch (InterruptedException e) {
-						System.out.println("Exiting out of s2");
+						logger.trace("Interrupt signal received, breaking out of sleep 2");
 						interrupt();
 						break;
 					}
