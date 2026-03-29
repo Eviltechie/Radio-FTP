@@ -19,6 +19,7 @@ import com.google.gson.JsonSyntaxException;
 import to.joe.ftp.config.Config;
 import to.joe.ftp.config.FTPHost;
 import to.joe.ftp.ftp.FTP;
+import to.joe.ftp.local.Local;
 
 public class Main {
 
@@ -59,7 +60,7 @@ public class Main {
 		}
 		
 		// Start our FTP threads.
-		List<FTP> ftpThreads = new ArrayList<FTP>();
+		List<Thread> ftpThreads = new ArrayList<Thread>();
 		
 		for (FTPHost ftpHost : config.ftpHosts) { // TODO Make sure we don't have duplicate FTP servers.
 			try {
@@ -73,14 +74,24 @@ public class Main {
 			}
 		}
 		
-		// TODO Start our local thread(s)
+		try {
+			if (config.localHost.fetchers.size() > 0) {
+				Local localThread = new Local(config.localHost);
+				ftpThreads.add(localThread);
+				localThread.setName("local");
+				localThread.start();
+			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
 		final Thread mainThread = Thread.currentThread();
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
 				logger.info("Shutdown signal received");
-				for (FTP ftpThread : ftpThreads) {
+				for (Thread ftpThread : ftpThreads) {
 					ftpThread.interrupt();
 					try {
 						ftpThread.join();

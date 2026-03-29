@@ -9,6 +9,11 @@ import java.util.List;
 public class LocalHost {
 	
 	/**
+	 * Re-scan delay, in seconds.
+	 */
+	public int scanDelay = 30;
+	
+	/**
 	 * Action to perform. A "copy" will download the files only, while "move" will attempt to delete them from the source afterwards.
 	 */
 	public String action = "copy";
