@@ -69,8 +69,7 @@ public class Main {
 				ftpThread.setName(ftpHost.host);
 				ftpThread.start();
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				logger.error(e);
 			}
 		}
 		
@@ -82,8 +81,7 @@ public class Main {
 				localThread.start();
 			}
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e);
 		}
 		
 		final Thread mainThread = Thread.currentThread();

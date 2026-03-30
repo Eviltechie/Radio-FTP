@@ -38,7 +38,7 @@ import to.joe.ftp.config.Fetcher;
 public class FTP extends Thread {
 	
 	private FTPHost config;
-	private FTPClient client = new FTPClient(); // FIXME Need to try FTPSClient too...
+	private FTPClient client = new FTPClient();
 	private Connection connection;
 	private Logger logger = LogManager.getLogger(FTP.class.getName());
 	
@@ -96,8 +96,7 @@ public class FTP extends Thread {
 		} catch (FTPConnectionClosedException e) {
 			// Pass, we are closing the connection anyway.
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e);
 		} finally {
 			try {
 				client.disconnect();
@@ -178,7 +177,7 @@ public class FTP extends Thread {
 	}
 	
 	@Override
-	public void run() { // TODO More checking for interrupted.
+	public void run() {
 		try {
 			PreparedStatement psUpsert = connection.prepareStatement("INSERT INTO files(host, fetcher, file, size, modified) VALUES(?, ?, ?, ?, ?) ON CONFLICT (host, fetcher, file) DO UPDATE SET size=excluded.size, modified=excluded.modified");
 			psUpsert.setString(1, config.host);
@@ -296,11 +295,9 @@ public class FTP extends Thread {
 			}
 			connection.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e);
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e);
 		} finally {
 			ftpLogoutAndDisconnect();
 		}

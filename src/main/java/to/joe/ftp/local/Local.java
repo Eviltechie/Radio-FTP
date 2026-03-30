@@ -50,8 +50,7 @@ public class Local extends Thread {
 				}
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e);
 		}
 		
 		Pattern pattern = Pattern.compile(fetcher.sourcePattern);
@@ -89,7 +88,7 @@ public class Local extends Thread {
 	}
 	
 	@Override
-	public void run() { // TODO More checking for interrupted.
+	public void run() {
 		try {
 			PreparedStatement psUpsert = connection.prepareStatement("INSERT INTO files(host, fetcher, file, size, modified) VALUES(?, ?, ?, ?, ?) ON CONFLICT (host, fetcher, file) DO UPDATE SET size=excluded.size, modified=excluded.modified");
 			psUpsert.setString(1, "local");
@@ -207,11 +206,9 @@ public class Local extends Thread {
 			}
 			connection.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e);
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e);
 		}
 	}
 
