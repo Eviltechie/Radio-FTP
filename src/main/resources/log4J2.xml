@@ -7,7 +7,7 @@
     <RollingFile name="FileAppender" fileName="logs/current.log" filePattern="logs/old%i.log">
       <PatternLayout pattern="%date{DEFAULT} [%threadName] [%-5level] [%logger{36}] - %msg%n%throwable" />
       <Policies>
-        <SizeBasedTriggeringPolicy size="5 kB" />
+        <SizeBasedTriggeringPolicy size="5 MB" />
       </Policies>
       <DefaultRolloverStrategy fileIndex="min">
       </DefaultRolloverStrategy>
