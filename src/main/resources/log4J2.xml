@@ -4,10 +4,19 @@
     <Console name="ConsoleAppender" target="SYSTEM_OUT">
       <PatternLayout pattern="%date{DEFAULT} [%threadName] [%-5level] [%logger{36}] - %msg%n%throwable" />
     </Console>
+    <RollingFile name="FileAppender" fileName="logs/current.log" filePattern="logs/old%i.log">
+      <PatternLayout pattern="%date{DEFAULT} [%threadName] [%-5level] [%logger{36}] - %msg%n%throwable" />
+      <Policies>
+        <SizeBasedTriggeringPolicy size="5 kB" />
+      </Policies>
+      <DefaultRolloverStrategy fileIndex="min">
+      </DefaultRolloverStrategy>
+    </RollingFile>
   </Appenders>
   <Loggers>
     <Root level="DEBUG">
       <AppenderRef ref="ConsoleAppender"/>
+      <AppenderRef ref="FileAppender"/>
     </Root>
   </Loggers>
 </Configuration>

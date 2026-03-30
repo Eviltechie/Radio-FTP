@@ -105,6 +105,7 @@ public class Main {
 				} catch (InterruptedException e) {
 					// Pass
 				}
+				LogManager.shutdown();
 			}
 		});
 	}
