@@ -6,7 +6,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -59,10 +61,22 @@ public class Main {
 			System.exit(1);
 		}
 		
+		{
+			// Check for unique FTP hosts.
+			Set<String> hosts = new HashSet<String>();
+			for (FTPHost ftpHost : config.ftpHosts) {
+				hosts.add(String.format("%s%s", ftpHost.host.toLowerCase(), ftpHost.port));
+			}
+			if (hosts.size() != config.ftpHosts.size()) {
+				logger.fatal("Duplicate FTP host detected, exiting.");
+				System.exit(1);
+			}
+		}
+		
 		// Start our FTP threads.
 		List<Thread> ftpThreads = new ArrayList<Thread>();
 		
-		for (FTPHost ftpHost : config.ftpHosts) { // TODO Make sure we don't have duplicate FTP servers.
+		for (FTPHost ftpHost : config.ftpHosts) {
 			try {
 				FTP ftpThread = new FTP(ftpHost);
 				ftpThreads.add(ftpThread);
