@@ -83,7 +83,7 @@ public class Main {
 				ftpThread.setName(ftpHost.host);
 				ftpThread.start();
 			} catch (Exception e) {
-				logger.error(e);
+				logger.error("Error starting FTP thread", e);
 			}
 		}
 		
@@ -95,7 +95,7 @@ public class Main {
 				localThread.start();
 			}
 		} catch (Exception e) {
-			logger.error(e);
+			logger.error("Error starting local thread", e);
 		}
 		
 		final Thread mainThread = Thread.currentThread();

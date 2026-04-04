@@ -50,7 +50,7 @@ public class Local extends Thread {
 				}
 			}
 		} catch (IOException e) {
-			logger.error(e);
+			logger.error("", e);
 		}
 		
 		Pattern pattern = Pattern.compile(fetcher.sourcePattern);
@@ -206,9 +206,9 @@ public class Local extends Thread {
 			}
 			connection.close();
 		} catch (IOException e) {
-			logger.error(e);
+			logger.error("", e);
 		} catch (SQLException e) {
-			logger.error(e);
+			logger.error("", e);
 		}
 	}
 

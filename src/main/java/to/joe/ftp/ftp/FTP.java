@@ -96,7 +96,7 @@ public class FTP extends Thread {
 		} catch (FTPConnectionClosedException e) {
 			// Pass, we are closing the connection anyway.
 		} catch (IOException e) {
-			logger.error(e);
+			logger.error("", e);
 		} finally {
 			try {
 				client.disconnect();
@@ -295,9 +295,9 @@ public class FTP extends Thread {
 			}
 			connection.close();
 		} catch (IOException e) {
-			logger.error(e);
+			logger.error("", e);
 		} catch (SQLException e) {
-			logger.error(e);
+			logger.error("", e);
 		} finally {
 			ftpLogoutAndDisconnect();
 		}

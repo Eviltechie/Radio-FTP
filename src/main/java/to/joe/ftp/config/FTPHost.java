@@ -24,7 +24,7 @@ public class FTPHost {
 	/**
 	 * Action to perform. A "copy" will download the files only, while "move" will attempt to delete them from the source afterwards.
 	 */
-	public String action = "copy";
+	public String action = "copy"; // TODO Implement this
 	
 	/**
 	 * A list of fetchers associated with this FTP host.
