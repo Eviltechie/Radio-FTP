@@ -63,7 +63,7 @@ public class FTP extends Thread {
 		int reply;
 		
 		client.connect(config.host, config.port);
-		logger.info("Connected");
+		logger.info("Connected to {}", config.host);
 		printLog(client);
 		
 		reply = client.getReplyCode();

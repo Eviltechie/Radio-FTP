@@ -5,9 +5,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
@@ -20,8 +18,6 @@ import com.google.gson.JsonSyntaxException;
 
 import to.joe.ftp.config.Config;
 import to.joe.ftp.config.FTPHost;
-import to.joe.ftp.ftp.FTP;
-import to.joe.ftp.local.Local;
 
 public class Main {
 
@@ -73,53 +69,10 @@ public class Main {
 			}
 		}
 		
-		// Start our FTP threads.
-		List<Thread> ftpThreads = new ArrayList<Thread>();
+		Watchdog watchdogThread = new Watchdog(config);
+		watchdogThread.start();
 		
-		for (FTPHost ftpHost : config.ftpHosts) {
-			try {
-				FTP ftpThread = new FTP(ftpHost);
-				ftpThreads.add(ftpThread);
-				ftpThread.setName(ftpHost.host);
-				ftpThread.start();
-			} catch (Exception e) {
-				logger.error("Error starting FTP thread", e);
-			}
-		}
-		
-		try {
-			if (config.localHost.fetchers.size() > 0) {
-				Local localThread = new Local(config.localHost);
-				ftpThreads.add(localThread);
-				localThread.setName("local");
-				localThread.start();
-			}
-		} catch (Exception e) {
-			logger.error("Error starting local thread", e);
-		}
-		
-		final Thread mainThread = Thread.currentThread();
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			@Override
-			public void run() {
-				logger.info("Shutdown signal received");
-				for (Thread ftpThread : ftpThreads) {
-					ftpThread.interrupt();
-					try {
-						ftpThread.join();
-					} catch (InterruptedException e) {
-						// Pass
-					}
-				}
-				try {
-					mainThread.join();
-					logger.info("All threads terminated, goodbye");
-				} catch (InterruptedException e) {
-					// Pass
-				}
-				LogManager.shutdown();
-			}
-		});
+		Runtime.getRuntime().addShutdownHook(new ShutdownHook(watchdogThread));
 	}
 
 }
