@@ -55,7 +55,7 @@ public class Watchdog extends Thread {
 			logger.error("Error starting local thread", e);
 		}
 		
-		while (!isInterrupted()) { // Every 30 seconds, loop over all threads and make sure they are running, re-starting if needed.
+		while (!interrupted()) { // Every 30 seconds, loop over all threads and make sure they are running, re-starting if needed.
 			for (Map.Entry<FTPHost, FTP> entry : ftpThreads.entrySet()) {
 				if (!entry.getValue().isAlive()) {
 					logger.warn("FTP thread {} terminated, attempting to re-establish FTP connection", entry.getValue().getName());
@@ -83,8 +83,10 @@ public class Watchdog extends Thread {
 			
 			try {
 				Thread.sleep(Duration.ofSeconds(30));
+				logger.debug("Watchdoog loop complete");
 			} catch (InterruptedException e) {
 				logger.info("Watchdog interrupted, beginning shutdown sequence");
+				interrupt();
 			}
 		}
 		

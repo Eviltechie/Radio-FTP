@@ -69,7 +69,7 @@ public class Main {
 			}
 		}
 		
-		Watchdog watchdogThread = new Watchdog(config);
+		final Watchdog watchdogThread = new Watchdog(config);
 		watchdogThread.start();
 		
 		Runtime.getRuntime().addShutdownHook(new ShutdownHook(watchdogThread));

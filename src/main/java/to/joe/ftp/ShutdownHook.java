@@ -12,6 +12,7 @@ public class ShutdownHook extends Thread {
 	
 	public ShutdownHook(Watchdog watchdogThread) {
 		this.watchdogThread = watchdogThread;
+		setName("Shutdown Hook");
 	}
 	
 	@Override
@@ -22,7 +23,7 @@ public class ShutdownHook extends Thread {
 			watchdogThread.join();
 			logger.info("All threads terminated, goodbye");
 			LogManager.shutdown();
-		} catch (InterruptedException e) {
+		} catch (InterruptedException e) { 
 			// Pass
 		}
 	}

@@ -92,7 +92,7 @@ public class FTP extends Thread {
 	private void ftpLogoutAndDisconnect() {
 		try {
 			client.logout();
-			logger.info("Logged out");
+			logger.info("Logged out of {}", config.host);
 		} catch (FTPConnectionClosedException e) {
 			// Pass, we are closing the connection anyway.
 		} catch (IOException e) {
@@ -103,7 +103,7 @@ public class FTP extends Thread {
 			} catch (IOException e) {
 				// Pass
 			} finally {
-				logger.info("Disconnected");
+				logger.info("Disconnected from {}", config.host);
 			}
 		}
 	}
