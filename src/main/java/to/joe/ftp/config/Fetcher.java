@@ -9,17 +9,17 @@ import to.joe.ftp.ftp.QueuedFile;
  */
 public class Fetcher {
 	
-	public String name = "Job Name";
+	private String name = "Job Name";
 	
-	public String action = "copy";
+	private String action = "copy";
 	
-	public boolean wetRun = false;
+	private boolean wetRun = false;
 	
-	public String sourcePath = "/";
-	public String destinationPath = "/";
+	private String sourcePath = "/";
+	private String destinationPath = "/";
 	
-	public String sourcePattern = ".+\\.wav$";
-	public String destinationPattern = "$0";
+	private String sourcePattern = ".+\\.wav$";
+	private String destinationPattern = "$0";
 	
 	/**
 	 * Name used to identify this fetcher in the database.

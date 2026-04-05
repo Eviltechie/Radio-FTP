@@ -8,9 +8,16 @@ import java.util.List;
  */
 public class Config {
 	
-	// TODO Add option for working directory other than %TEMP%
-	public List<FTPHost> ftpHosts = new ArrayList<FTPHost>();
-	public LocalHost localHost = new LocalHost();
+	private List<FTPHost> ftpHosts = new ArrayList<FTPHost>();
+	private LocalHost localHost = new LocalHost();
+	
+	public List<FTPHost> getFTPHosts() {
+		return ftpHosts;
+	}
+	
+	public LocalHost getLocalHost() {
+		return localHost;
+	}
 	
 	/**
 	 * Constructor creates default configuration when not being created through deserialization.

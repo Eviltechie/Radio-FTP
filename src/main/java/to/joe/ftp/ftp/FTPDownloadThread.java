@@ -42,9 +42,9 @@ public class FTPDownloadThread extends DownloadThread {
 			return ftpClient;
 		}
 		
-		logger.info("Establishing FTP connection to {}:{}", getConfig().getHost(), getConfig().port);
+		logger.info("Establishing FTP connection to {}:{}", getConfig().getHost(), getConfig().getPort());
 		
-		if (getConfig().ftps) { // If we are using FTPS, we use our modified FTPS client instead of the standard one.
+		if (getConfig().getFTPS()) { // If we are using FTPS, we use our modified FTPS client instead of the standard one.
 			FTPSClientSSLSessionReuse ftps = new FTPSClientSSLSessionReuse();
 			ftps.setTrustManager(TrustManagerUtils.getAcceptAllTrustManager());
 			ftpClient = ftps;
@@ -54,7 +54,7 @@ public class FTPDownloadThread extends DownloadThread {
 		
 		int replyCode;
 		
-		ftpClient.connect(getConfig().getHost(), getConfig().port);
+		ftpClient.connect(getConfig().getHost(), getConfig().getPort());
 		printLog(ftpClient);
 		
 		replyCode = ftpClient.getReplyCode();
@@ -66,7 +66,7 @@ public class FTPDownloadThread extends DownloadThread {
 		
 		logger.info("Connected to {}", getConfig().getHost());
 		
-		ftpClient.login(getConfig().username, getConfig().password); // TODO Test what happens if we put in wrong info, and then log it.
+		ftpClient.login(getConfig().getUsername(), getConfig().getPassword()); // TODO Test what happens if we put in wrong info, and then log it.
 		
 		if (ftpClient instanceof FTPSClient) {
 			FTPSClient ftpsClient = (FTPSClient) ftpClient;
@@ -101,7 +101,7 @@ public class FTPDownloadThread extends DownloadThread {
 	protected List<QueuedFile> getInterestedFiles(Fetcher fetcher) throws IOException {
 		List<QueuedFile> interestedFiles = new ArrayList<QueuedFile>();
 		
-		getFTPClient().changeWorkingDirectory(fetcher.sourcePath);
+		getFTPClient().changeWorkingDirectory(fetcher.getSourcePath());
 		
 		FTPFile[] files;
 		if (getFTPClient().hasFeature(FTPCmd.MLSD)) { // If possible, we try to use MLSD to list the directory. If not, we fall back to regular LIST.
@@ -110,7 +110,7 @@ public class FTPDownloadThread extends DownloadThread {
 			files = getFTPClient().listFiles();
 		}
 		
-		Pattern pattern = Pattern.compile(fetcher.sourcePattern);
+		Pattern pattern = Pattern.compile(fetcher.getSourcePattern());
 		
 		for (FTPFile file : files) {
 			if (file.isFile()) {

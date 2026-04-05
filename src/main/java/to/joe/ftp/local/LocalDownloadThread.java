@@ -43,7 +43,7 @@ public class LocalDownloadThread extends DownloadThread {
 		List<QueuedFile> interestedFiles = new ArrayList<QueuedFile>();
 		
 		Set<Path> files = new HashSet<Path>();
-		try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(fetcher.sourcePath))) {
+		try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(fetcher.getSourcePath()))) {
 			for (Path path : stream) {
 				if (!Files.isDirectory(path)) {
 					files.add(path);
@@ -53,7 +53,7 @@ public class LocalDownloadThread extends DownloadThread {
 			logger.error("", e);
 		}
 		
-		Pattern pattern = Pattern.compile(fetcher.sourcePattern);
+		Pattern pattern = Pattern.compile(fetcher.getSourcePattern());
 		
 		for (Path path : files) {
 			Matcher matcher = pattern.matcher(path.getFileName().toString());
@@ -72,7 +72,7 @@ public class LocalDownloadThread extends DownloadThread {
 		Instant start = Instant.now();
 		
 		logger.info("Copying file to {}", tempFile.getAbsolutePath());
-		Files.copy(Paths.get(fetcher.sourcePath, pendingFile.fileName), fileOutputStream);
+		Files.copy(Paths.get(fetcher.getSourcePath(), pendingFile.fileName), fileOutputStream);
 		
 		Instant end = Instant.now();
 		Duration difference = Duration.between(start, end);
@@ -84,7 +84,7 @@ public class LocalDownloadThread extends DownloadThread {
 
 	@Override
 	protected void deleteSourceFile(Fetcher fetcher, QueuedFile pendingFile) throws IOException {
-		Files.delete(Paths.get(fetcher.sourcePath, pendingFile.fileName));
+		Files.delete(Paths.get(fetcher.getSourcePath(), pendingFile.fileName));
 		
 		logger.info("Deleted {} from source folder", pendingFile.fileName);
 	}

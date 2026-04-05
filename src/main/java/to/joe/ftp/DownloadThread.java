@@ -97,9 +97,9 @@ public abstract class DownloadThread extends Thread {
 		for (Fetcher fetcher : getConfig().getFetchers()) { // We loop through each fetcher in turn.
 			fetcher.pendingFiles = new ArrayList<QueuedFile>(); // Each fetcher has a transient variable for storing interested files. This lets us compare when we re-check in 5 seconds.
 			
-			logger.info("Searching directory {} with pattern {}", fetcher.sourcePath, fetcher.sourcePattern);
+			logger.info("Searching directory {} with pattern {}", fetcher.getSourcePath(), fetcher.getSourcePattern());
 			
-			psSelect.setString(2, fetcher.name); // In a moment we will check to see if we have a record of this file. If we do and all the info is the same we can skip processing it.
+			psSelect.setString(2, fetcher.getName()); // In a moment we will check to see if we have a record of this file. If we do and all the info is the same we can skip processing it.
 			
 			List<QueuedFile> interestedFiles = getInterestedFiles(fetcher);
 			
@@ -141,7 +141,7 @@ public abstract class DownloadThread extends Thread {
 	
 	private void secondCheck() throws Exception {
 		for (Fetcher fetcher : getConfig().getFetchers()) { // We loop through each fetcher in turn.
-			psUpsert.setString(2, fetcher.name);
+			psUpsert.setString(2, fetcher.getName());
 			
 			List<QueuedFile> interestedFiles = getInterestedFiles(fetcher); // It's now five seconds later, so we get interested files again to see if they have changed. (Indicating they are currently being written to.)
 			
@@ -153,7 +153,7 @@ public abstract class DownloadThread extends Thread {
 					psUpsert.setLong(4, pendingFile.fileSize);
 					psUpsert.setString(5, pendingFile.timeStamp.toString());
 					
-					File tempFolder = new File(System.getProperty("java.io.tmpdir"), String.format("%s%s%s%s", "radio-ftp", File.separator, fetcher.name, File.separator)); // Create a temp folder to download the file to.
+					File tempFolder = new File(System.getProperty("java.io.tmpdir"), String.format("%s%s%s%s", "radio-ftp", File.separator, fetcher.getName(), File.separator)); // Create a temp folder to download the file to.
 					if (!tempFolder.exists()) {
 						tempFolder.mkdirs();
 					}
@@ -165,12 +165,12 @@ public abstract class DownloadThread extends Thread {
 					} else {
 						downloadFile(fetcher, pendingFile, tempFile); // Pass off the downloading to an abstract method for the implementation specific download.
 						
-						File destinationFolder = new File(fetcher.destinationPath); // Create our destination folder if it doesn't exist.
+						File destinationFolder = new File(fetcher.getDestinationPath()); // Create our destination folder if it doesn't exist.
 						if (!destinationFolder.exists()) {
 							destinationFolder.mkdirs();
 						}
 						
-						String destinationName = pendingFile.matcher.replaceFirst(fetcher.destinationPattern);
+						String destinationName = pendingFile.matcher.replaceFirst(fetcher.getDestinationPattern());
 						File destination = new File(destinationFolder, destinationName); // Create a destination file with the final file name with the regex from the fetcher.
 						
 						logger.info("Moving file from temp directory to {}", destination.getAbsolutePath());

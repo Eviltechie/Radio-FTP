@@ -26,16 +26,16 @@ public class Watchdog extends Thread {
 	
 	@Override
 	public void run() {
-		if (config.ftpHosts.size() > 0) { // Start any FTP threads for the first time
+		if (config.getFTPHosts().size() > 0) { // Start any FTP threads for the first time
 			logger.info("Starting FTP connections");
 		} else {
 			logger.info("No FTP configurations present");
 		}
-		for (FTPHost ftpHost : config.ftpHosts) {
+		for (FTPHost ftpHost : config.getFTPHosts()) {
 			try {
 				FTPDownloadThread ftpThread = new FTPDownloadThread(ftpHost);
 				ftpThreads.put(ftpHost, ftpThread);
-				ftpThread.setName(ftpHost.host);
+				ftpThread.setName(ftpHost.getHost());
 				ftpThread.start();
 			} catch (Exception e) {
 				logger.error("Error starting FTP thread", e);
@@ -43,9 +43,9 @@ public class Watchdog extends Thread {
 		}
 		
 		try { // Start local thread for the first time
-			if (config.localHost.fetchers.size() > 0) {
+			if (config.getLocalHost().getFetchers().size() > 0) {
 				logger.info("Starting local connection");
-				localThread = new LocalDownloadThread(config.localHost);
+				localThread = new LocalDownloadThread(config.getLocalHost());
 				localThread.setName("local");
 				localThread.start();
 			} else {
@@ -61,7 +61,7 @@ public class Watchdog extends Thread {
 					logger.warn("FTP thread {} terminated, attempting to re-establish FTP connection", entry.getValue().getName());
 					try {
 						FTPDownloadThread ftpThread = new FTPDownloadThread(entry.getKey());
-						ftpThread.setName(entry.getKey().host);
+						ftpThread.setName(entry.getKey().getHost());
 						ftpThread.start();
 						entry.setValue(ftpThread);
 					} catch (Exception e) {
@@ -73,7 +73,7 @@ public class Watchdog extends Thread {
 			if (localThread != null && !localThread.isAlive()) {
 				logger.warn("Local thread terminated, attempting to restart");
 				try {
-					localThread = new LocalDownloadThread(config.localHost);
+					localThread = new LocalDownloadThread(config.getLocalHost());
 					localThread.setName("local");
 					localThread.start();
 				} catch (Exception e) {

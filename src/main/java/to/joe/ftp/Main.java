@@ -60,10 +60,10 @@ public class Main {
 		{
 			// Check for unique FTP hosts.
 			Set<String> hosts = new HashSet<String>();
-			for (FTPHost ftpHost : config.ftpHosts) {
-				hosts.add(String.format("%s%s", ftpHost.host.toLowerCase(), ftpHost.port));
+			for (FTPHost ftpHost : config.getFTPHosts()) {
+				hosts.add(String.format("%s%s", ftpHost.getHost().toLowerCase(), ftpHost.getPort()));
 			}
-			if (hosts.size() != config.ftpHosts.size()) {
+			if (hosts.size() != config.getFTPHosts().size()) {
 				logger.fatal("Duplicate FTP host detected, exiting.");
 				System.exit(1);
 			}

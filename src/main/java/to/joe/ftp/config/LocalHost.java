@@ -6,13 +6,11 @@ import java.util.List;
 /**
  * Represents the local file system which will be scanned...
  */
-public class LocalHost implements CommonConfig { // TODO Set all fields to private
+public class LocalHost implements CommonConfig {
 	
-	public int scanDelay = 30;
+	private int scanDelay = 30;
 	
-	public String action = "copy";
-	
-	public List<Fetcher> fetchers = new ArrayList<Fetcher>();
+	private List<Fetcher> fetchers = new ArrayList<Fetcher>();
 	
 	public LocalHost() {
 		fetchers.add(new Fetcher());
