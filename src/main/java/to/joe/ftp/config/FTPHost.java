@@ -6,7 +6,7 @@ import java.util.ArrayList;
 /**
  * Represents a FTP host that will be scanned at an interval for files to download.
  */
-public class FTPHost {
+public class FTPHost implements CommonConfig { // TODO Set all fields to private
 	
 	public String host = "localhost";
 	public int port = 21;
@@ -16,26 +16,41 @@ public class FTPHost {
 	public String username = "anonymous";
 	public String password = "";
 	
-	/**
-	 * Re-scan delay, in seconds.
-	 */
 	public int scanDelay = 30;
 	
-	/**
-	 * Action to perform. A "copy" will download the files only, while "move" will attempt to delete them from the source afterwards.
-	 */
 	public String action = "copy"; // TODO Implement this
 	
-	/**
-	 * A list of fetchers associated with this FTP host.
-	 */
+	private boolean wetRun = false;
+	
 	public List<Fetcher> fetchers = new ArrayList<Fetcher>();
 	
-	/**
-	 * Constructor creates default configuration when not being created through deserialization.
-	 */
 	public FTPHost() {
 		fetchers.add(new Fetcher());
+	}
+
+	@Override
+	public int getScanDelay() {
+		return scanDelay;
+	}
+
+	@Override
+	public String getAction() {
+		return action;
+	}
+
+	@Override
+	public boolean wetRun() {
+		return wetRun;
+	}
+
+	@Override
+	public List<Fetcher> getFetchers() {
+		return fetchers;
+	}
+
+	@Override
+	public String getHost() {
+		return host;
 	}
 
 }

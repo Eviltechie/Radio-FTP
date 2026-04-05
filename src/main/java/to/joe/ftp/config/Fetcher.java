@@ -35,6 +35,7 @@ public class Fetcher {
 	
 	/**
 	 * List of pending files to be re-checked before transferring.
+	 * TODO This should probably be a Map in the download thread...
 	 */
 	public transient List<QueuedFile> pendingFiles;
 

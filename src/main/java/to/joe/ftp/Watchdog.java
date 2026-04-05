@@ -14,7 +14,7 @@ import to.joe.ftp.local.Local;
 
 public class Watchdog extends Thread {
 	
-	private Logger logger = LogManager.getLogger(FTP.class.getName());
+	private Logger logger = LogManager.getLogger(Watchdog.class.getName());
 	private Config config;
 	private Map<FTPHost, FTP> ftpThreads = new HashMap<FTPHost, FTP>();
 	private Local localThread = null;
