@@ -67,6 +67,7 @@ public class FTPDownloadThread extends DownloadThread {
 		logger.info("Connected to {}", getConfig().getHost());
 		
 		ftpClient.login(getConfig().getUsername(), getConfig().getPassword()); // TODO Test what happens if we put in wrong info, and then log it.
+		printLog(ftpClient);
 		
 		if (ftpClient instanceof FTPSClient) {
 			FTPSClient ftpsClient = (FTPSClient) ftpClient;
@@ -76,7 +77,7 @@ public class FTPDownloadThread extends DownloadThread {
 		
 		ftpClient.enterLocalPassiveMode();
 		ftpClient.features();
-		printLog(ftpClient); // TODO Might need to add a lot more of this...
+		printLog(ftpClient);
 		
 		if (!ftpClient.hasFeature(FTPCmd.MLSD) && !ftpClient.hasFeature(FTPCmd.MDTM)) {
 			logger.warn("Server does not support accurate timestamps (MLSD or MDTM commands), risk of issues at new year's.");
@@ -102,12 +103,15 @@ public class FTPDownloadThread extends DownloadThread {
 		List<QueuedFile> interestedFiles = new ArrayList<QueuedFile>();
 		
 		getFTPClient().changeWorkingDirectory(fetcher.getSourcePath());
+		printLog(ftpClient);
 		
 		FTPFile[] files;
 		if (getFTPClient().hasFeature(FTPCmd.MLSD)) { // If possible, we try to use MLSD to list the directory. If not, we fall back to regular LIST.
 			files = getFTPClient().mlistDir();
+			printLog(ftpClient);
 		} else {
 			files = getFTPClient().listFiles();
+			printLog(ftpClient);
 		}
 		
 		Pattern pattern = Pattern.compile(fetcher.getSourcePattern());
@@ -118,7 +122,9 @@ public class FTPDownloadThread extends DownloadThread {
 				if (matcher.matches()) {
 					Instant timestamp;
 					if (!getFTPClient().hasFeature(FTPCmd.MLSD) && getFTPClient().hasFeature(FTPCmd.MDTM)) {
+						printLog(ftpClient);
 						timestamp = getFTPClient().mdtmInstant(file.getName());
+						printLog(ftpClient);
 					} else {
 						timestamp = file.getTimestampInstant();
 					}
@@ -138,6 +144,7 @@ public class FTPDownloadThread extends DownloadThread {
 		
 		logger.info("Downloading file to {}", tempFile.getAbsolutePath());
 		getFTPClient().retrieveFile(pendingFile.fileName, fileOutputStream);
+		printLog(ftpClient);
 		
 		Instant end = Instant.now();
 		Duration difference = Duration.between(start, end);
@@ -150,6 +157,7 @@ public class FTPDownloadThread extends DownloadThread {
 	@Override
 	protected void deleteSourceFile(Fetcher fetcherm, QueuedFile pendingFile) throws IOException {
 		getFTPClient().deleteFile(pendingFile.fileName);
+		printLog(ftpClient);
 		
 		logger.info("Deleted {} from remote host", pendingFile.fileName);
 	}
@@ -158,6 +166,7 @@ public class FTPDownloadThread extends DownloadThread {
 	protected void cleanup() {
 		try {
 			ftpClient.logout();
+			printLog(ftpClient);
 			logger.info("Logged out of {}", getConfig().getHost());
 		} catch (FTPConnectionClosedException e) {
 			// Pass, we are closing the connection anyway.
