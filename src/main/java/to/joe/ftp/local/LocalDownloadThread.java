@@ -79,7 +79,7 @@ public class LocalDownloadThread extends DownloadThread {
 		
 		fileOutputStream.close();
 		
-		logger.info("Copied {} bytes in {} seconds", pendingFile.fileSize, difference.toSeconds());
+		logger.info("Copied {} bytes in {}.{} seconds", pendingFile.fileSize, difference.toSeconds(), difference.toMillisPart());
 	}
 
 	@Override

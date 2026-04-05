@@ -65,6 +65,10 @@
 	        <manifest>
 	          <mainClass>to.joe.ftp.Main</mainClass>
 	        </manifest>
+	        <manifestEntries>
+                <Add-Opens>java.base/sun.security.util java.base/sun.security.ssl</Add-Opens>
+                <Enable-Native-Access>ALL-UNNAMED</Enable-Native-Access>
+            </manifestEntries>
 	      </archive>
 	    </configuration>
 	    <executions>

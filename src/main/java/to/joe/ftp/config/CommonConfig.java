@@ -22,7 +22,7 @@ public interface CommonConfig {
 	 * This is intended to be used for a "first run" where you may not want old or existing files to be re-downloaded.<br>
 	 * @return
 	 */
-	public boolean wetRun();
+	public boolean wetRun(); // TODO Implement this
 	
 	/**
 	 * A list of {@link Fetcher}s associated with this host.

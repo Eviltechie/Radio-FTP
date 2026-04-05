@@ -144,7 +144,7 @@ public class FTPDownloadThread extends DownloadThread {
 		
 		fileOutputStream.close();
 		
-		logger.info("Downloaded {} bytes in {} seconds", pendingFile.fileSize, difference.toSeconds());
+		logger.info("Downloaded {} bytes in {}.{} seconds", pendingFile.fileSize, difference.toSeconds(), difference.toMillisPart());
 	}
 
 	@Override

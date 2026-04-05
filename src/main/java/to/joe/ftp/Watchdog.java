@@ -9,15 +9,15 @@ import org.apache.logging.log4j.Logger;
 
 import to.joe.ftp.config.Config;
 import to.joe.ftp.config.FTPHost;
-import to.joe.ftp.ftp.FTP;
-import to.joe.ftp.local.Local;
+import to.joe.ftp.ftp.FTPDownloadThread;
+import to.joe.ftp.local.LocalDownloadThread;
 
 public class Watchdog extends Thread {
 	
 	private Logger logger = LogManager.getLogger(Watchdog.class.getName());
 	private Config config;
-	private Map<FTPHost, FTP> ftpThreads = new HashMap<FTPHost, FTP>();
-	private Local localThread = null;
+	private Map<FTPHost, FTPDownloadThread> ftpThreads = new HashMap<FTPHost, FTPDownloadThread>();
+	private LocalDownloadThread localThread = null;
 	
 	public Watchdog(Config config) {
 		setName("Watchdog");
@@ -33,7 +33,7 @@ public class Watchdog extends Thread {
 		}
 		for (FTPHost ftpHost : config.ftpHosts) {
 			try {
-				FTP ftpThread = new FTP(ftpHost);
+				FTPDownloadThread ftpThread = new FTPDownloadThread(ftpHost);
 				ftpThreads.put(ftpHost, ftpThread);
 				ftpThread.setName(ftpHost.host);
 				ftpThread.start();
@@ -45,7 +45,7 @@ public class Watchdog extends Thread {
 		try { // Start local thread for the first time
 			if (config.localHost.fetchers.size() > 0) {
 				logger.info("Starting local connection");
-				localThread = new Local(config.localHost);
+				localThread = new LocalDownloadThread(config.localHost);
 				localThread.setName("local");
 				localThread.start();
 			} else {
@@ -56,11 +56,11 @@ public class Watchdog extends Thread {
 		}
 		
 		while (!interrupted()) { // Every 30 seconds, loop over all threads and make sure they are running, re-starting if needed.
-			for (Map.Entry<FTPHost, FTP> entry : ftpThreads.entrySet()) {
+			for (Map.Entry<FTPHost, FTPDownloadThread> entry : ftpThreads.entrySet()) {
 				if (!entry.getValue().isAlive()) {
 					logger.warn("FTP thread {} terminated, attempting to re-establish FTP connection", entry.getValue().getName());
 					try {
-						FTP ftpThread = new FTP(entry.getKey());
+						FTPDownloadThread ftpThread = new FTPDownloadThread(entry.getKey());
 						ftpThread.setName(entry.getKey().host);
 						ftpThread.start();
 						entry.setValue(ftpThread);
@@ -73,7 +73,7 @@ public class Watchdog extends Thread {
 			if (localThread != null && !localThread.isAlive()) {
 				logger.warn("Local thread terminated, attempting to restart");
 				try {
-					localThread = new Local(config.localHost);
+					localThread = new LocalDownloadThread(config.localHost);
 					localThread.setName("local");
 					localThread.start();
 				} catch (Exception e) {
@@ -90,7 +90,7 @@ public class Watchdog extends Thread {
 			}
 		}
 		
-		for (FTP ftpThread : ftpThreads.values()) { // When interrupted, interrupt all other threads.
+		for (FTPDownloadThread ftpThread : ftpThreads.values()) { // When interrupted, interrupt all other threads.
 			logger.info("Stopping {} FTP thread", ftpThread.getName());
 			ftpThread.interrupt();
 			try {
