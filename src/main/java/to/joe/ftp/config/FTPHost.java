@@ -20,8 +20,6 @@ public class FTPHost implements CommonConfig { // TODO Set all fields to private
 	
 	public String action = "copy";
 	
-	private boolean wetRun = false;
-	
 	public List<Fetcher> fetchers = new ArrayList<Fetcher>();
 	
 	public FTPHost() {
@@ -31,16 +29,6 @@ public class FTPHost implements CommonConfig { // TODO Set all fields to private
 	@Override
 	public int getScanDelay() {
 		return scanDelay;
-	}
-
-	@Override
-	public String getAction() {
-		return action;
-	}
-
-	@Override
-	public boolean wetRun() {
-		return wetRun;
 	}
 
 	@Override

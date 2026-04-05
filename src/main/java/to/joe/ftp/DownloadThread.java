@@ -160,21 +160,25 @@ public abstract class DownloadThread extends Thread {
 					
 					File tempFile = new File(tempFolder, pendingFile.fileName); // Create a destination file to download to.
 					
-					downloadFile(fetcher, pendingFile, tempFile); // Pass off the downloading to an abstract method for the implementation specific download.
-					
-					File destinationFolder = new File(fetcher.destinationPath); // Create our destination folder if it doesn't exist.
-					if (!destinationFolder.exists()) {
-						destinationFolder.mkdirs();
+					if (fetcher.isWetRun()) {
+						logger.info("Wet run enabled, skipping processing for {}", pendingFile.fileName);
+					} else {
+						downloadFile(fetcher, pendingFile, tempFile); // Pass off the downloading to an abstract method for the implementation specific download.
+						
+						File destinationFolder = new File(fetcher.destinationPath); // Create our destination folder if it doesn't exist.
+						if (!destinationFolder.exists()) {
+							destinationFolder.mkdirs();
+						}
+						
+						String destinationName = pendingFile.matcher.replaceFirst(fetcher.destinationPattern);
+						File destination = new File(destinationFolder, destinationName); // Create a destination file with the final file name with the regex from the fetcher.
+						
+						logger.info("Moving file from temp directory to {}", destination.getAbsolutePath());
+						
+						Files.move(tempFile.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING); // Move temp file, replacing existing file if needed.
 					}
 					
-					String destinationName = pendingFile.matcher.replaceFirst(fetcher.destinationPattern);
-					File destination = new File(destinationFolder, destinationName); // Create a destination file with the final file name with the regex from the fetcher.
-					
-					logger.info("Moving file from temp directory to {}", destination.getAbsolutePath());
-					
-					Files.move(tempFile.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING); // Move temp file, replacing existing file if needed.
-					
-					if (getConfig().getAction().equalsIgnoreCase("move")) {
+					if (fetcher.getAction().equalsIgnoreCase("move")) {
 						deleteSourceFile(fetcher, pendingFile);
 					}
 					

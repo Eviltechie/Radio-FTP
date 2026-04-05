@@ -9,29 +9,77 @@ import to.joe.ftp.ftp.QueuedFile;
  */
 public class Fetcher {
 	
+	public String name = "Job Name";
+	
+	public String action = "copy";
+	
+	public boolean wetRun = false;
+	
+	public String sourcePath = "/";
+	public String destinationPath = "/";
+	
+	public String sourcePattern = ".+\\.wav$";
+	public String destinationPattern = "$0";
+	
 	/**
 	 * Name used to identify this fetcher in the database.
-	 * Important in case two fetchers have the same source directory. 
+	 * Important in case two fetchers have the same source directory.
+	 * @return
 	 */
-	public String name = "Job Name";
+	public String getName() {
+		return name;
+	}
+	
+	/**
+	 * Action to perform. A "copy" will download the files only, while "move" will attempt to delete them from the source afterwards.
+	 * @return
+	 */
+	public String getAction() {
+		return action;
+	}
+	
+	/**
+	 * If <code>true</code>:<br>
+	 * When set to copy, files which match will be marked as processed, but will not actually be copied to the destination.<br>
+	 * When set to move, files which match will be marked as processed and deleted from the source, but will not actually be moved to the destination.<br><br>
+	 * This is intended to be used for a "first run" where you may not want old or existing files to be re-downloaded.<br>
+	 * @return
+	 */
+	public boolean isWetRun() {
+		return wetRun;
+	}
 	
 	/**
 	 * Files will be downloaded from this directory on the remote site.
+	 * @return
 	 */
-	public String sourcePath = "/";
-	/**
-	 * Files will be placed in this directory on the local site.
-	 */
-	public String destinationPath = "/";
+	public String getSourcePath() {
+		return sourcePath;
+	}
 	
 	/**
-	 * Files matching this regular expression pattern will be downloaded.
+	 * Files will be placed in this directory on the local site.
+	 * @return
 	 */
-	public String sourcePattern = ".+\\.wav$";
+	public String getDestinationPath() {
+		return destinationPath;
+	}
+	
 	/**
-	 * Downloaded files will be renamed using this pattern.
+	 * Files matching this regular expression pattern will be processed.
+	 * @return
 	 */
-	public String destinationPattern = "$0";
+	public String getSourcePattern() {
+		return sourcePattern;
+	}
+	
+	/**
+	 * Downloaded files will be renamed using this regex replacement pattern.
+	 * @return
+	 */
+	public String getDestinationPattern() {
+		return destinationPattern;
+	}
 	
 	/**
 	 * List of pending files to be re-checked before transferring.
