@@ -252,7 +252,7 @@ public class FTP extends Thread {
 								File tempDestination = new File(tempFolder, pendingFile.fileName);
 								FileOutputStream outputStream = new FileOutputStream(tempDestination);
 								logger.info("Downloading file to {}", tempDestination.getAbsolutePath());
-								getFTPClient().retrieveFile(pendingFile.fileName, outputStream); // TODO Catch exception here // TODO Calculate data rate here
+								getFTPClient().retrieveFile(pendingFile.fileName, outputStream);
 								outputStream.close();
 								
 								File destinationFolder = new File(fetcher.destinationPath);

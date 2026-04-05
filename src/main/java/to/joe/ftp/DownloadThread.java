@@ -87,13 +87,13 @@ public abstract class DownloadThread extends Thread {
 	 * @param fetcher
 	 * @return
 	 */
-	protected abstract List<QueuedFile> getInterestedFiles(Fetcher fetcher);
+	protected abstract List<QueuedFile> getInterestedFiles(Fetcher fetcher) throws Exception;
 	
 	/**
 	 * Iterates through each fetcher, getting files which match the source pattern, and then checks to see if we need to queue them for download.
-	 * @throws SQLException
+	 * @throws Exception 
 	 */
-	private void firstCheck() throws SQLException {
+	private void firstCheck() throws Exception {
 		for (Fetcher fetcher : getConfig().getFetchers()) { // We loop through each fetcher in turn.
 			fetcher.pendingFiles = new ArrayList<QueuedFile>(); // Each fetcher has a transient variable for storing interested files. This lets us compare when we re-check in 5 seconds.
 			
@@ -139,7 +139,7 @@ public abstract class DownloadThread extends Thread {
 		}
 	}
 	
-	private void secondCheck() throws SQLException, IOException {
+	private void secondCheck() throws Exception {
 		for (Fetcher fetcher : getConfig().getFetchers()) { // We loop through each fetcher in turn.
 			psUpsert.setString(2, fetcher.name);
 			
@@ -160,7 +160,7 @@ public abstract class DownloadThread extends Thread {
 					
 					File tempFile = new File(tempFolder, pendingFile.fileName); // Create a destination file to download to.
 					
-					downloadFile(pendingFile, tempFile); // Pass off the downloading to an abstract method for the implementation specific download.
+					downloadFile(fetcher, pendingFile, tempFile); // Pass off the downloading to an abstract method for the implementation specific download.
 					
 					File destinationFolder = new File(fetcher.destinationPath); // Create our destination folder if it doesn't exist.
 					if (!destinationFolder.exists()) {
@@ -175,7 +175,7 @@ public abstract class DownloadThread extends Thread {
 					Files.move(tempFile.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING); // Move temp file, replacing existing file if needed.
 					
 					if (getConfig().getAction().equalsIgnoreCase("move")) {
-						deleteSourceFile(pendingFile);
+						deleteSourceFile(fetcher, pendingFile);
 					}
 					
 					psUpsert.executeUpdate(); // After all other items succeed, we can run the upsert to record the file as processed.
@@ -196,9 +196,9 @@ public abstract class DownloadThread extends Thread {
 		}
 	}
 	
-	protected abstract void downloadFile(QueuedFile pendingFile, File tempFile);
+	protected abstract void downloadFile(Fetcher fetcher, QueuedFile pendingFile, File tempFile) throws Exception;
 	
-	protected abstract void deleteSourceFile(QueuedFile pendingFile);
+	protected abstract void deleteSourceFile(Fetcher fetcher, QueuedFile pendingFile) throws Exception;
 	
 	/**
 	 * Cleanup method. Runs in a finally block at the end of the thread loop.

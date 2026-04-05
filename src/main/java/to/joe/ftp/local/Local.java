@@ -163,7 +163,7 @@ public class Local extends Thread {
 								File tempDestination = new File(tempFolder, pendingFile.fileName);
 								FileOutputStream outputStream = new FileOutputStream(tempDestination);
 								logger.info("Copying file to {}", tempDestination.getAbsolutePath());
-								Files.copy(Paths.get(fetcher.sourcePath, pendingFile.fileName), outputStream); // TODO Catch exception here // TODO Calculate data rate here
+								Files.copy(Paths.get(fetcher.sourcePath, pendingFile.fileName), outputStream);
 								outputStream.close();
 								
 								File destinationFolder = new File(fetcher.destinationPath);

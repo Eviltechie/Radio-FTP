@@ -10,7 +10,7 @@ public class LocalHost implements CommonConfig { // TODO Set all fields to priva
 	
 	public int scanDelay = 30;
 	
-	public String action = "copy";  // TODO Implement this
+	public String action = "copy";
 	
 	private boolean wetRun = false;
 	
