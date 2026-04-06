@@ -32,6 +32,7 @@ public class Watchdog extends Thread {
 			logger.info("No FTP configurations present");
 		}
 		for (FTPHost ftpHost : config.getFTPHosts()) {
+			ftpThreads.put(ftpHost, null); // We populate the array with a null value even though it should be immediately overwritten. This way if there is an exception thrown in the constructor the watchdog will still attempt to re-start it.
 			try {
 				FTPDownloadThread ftpThread = new FTPDownloadThread(ftpHost);
 				ftpThreads.put(ftpHost, ftpThread);
@@ -56,9 +57,19 @@ public class Watchdog extends Thread {
 		}
 		
 		while (!interrupted()) { // Every 30 seconds, loop over all threads and make sure they are running, re-starting if needed.
+			try {
+				Thread.sleep(Duration.ofSeconds(30));
+				logger.debug("Start of watchdog loop");
+			} catch (InterruptedException e) {
+				logger.info("Watchdog interrupted, beginning shutdown sequence");
+				interrupt();
+				break;
+			}
+			
+			logger.debug("Number of FTP threads in map {}", ftpThreads.size());
 			for (Map.Entry<FTPHost, FTPDownloadThread> entry : ftpThreads.entrySet()) {
-				if (!entry.getValue().isAlive()) {
-					logger.warn("FTP thread {} terminated, attempting to re-establish FTP connection", entry.getValue().getName());
+				if (entry.getValue() == null || !entry.getValue().isAlive()) {
+					logger.warn("FTP thread {} not running, attempting to re-establish FTP connection", entry.getKey().getHost());
 					try {
 						FTPDownloadThread ftpThread = new FTPDownloadThread(entry.getKey());
 						ftpThread.setName(entry.getKey().getHost());
@@ -79,14 +90,6 @@ public class Watchdog extends Thread {
 				} catch (Exception e) {
 					logger.error("Error restarting local thread", e);
 				}
-			}
-			
-			try {
-				Thread.sleep(Duration.ofSeconds(30));
-				logger.debug("Watchdoog loop complete");
-			} catch (InterruptedException e) {
-				logger.info("Watchdog interrupted, beginning shutdown sequence");
-				interrupt();
 			}
 		}
 		

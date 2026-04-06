@@ -66,8 +66,14 @@ public class FTPDownloadThread extends DownloadThread {
 		
 		logger.info("Connected to {}", getConfig().getHost());
 		
-		ftpClient.login(getConfig().getUsername(), getConfig().getPassword()); // TODO Test what happens if we put in wrong info, and then log it.
+		ftpClient.login(getConfig().getUsername(), getConfig().getPassword());
+		replyCode = ftpClient.getReplyCode();
+		logger.debug("Reply code {}", replyCode);
 		printLog(ftpClient);
+		if (replyCode == FTPReply.NOT_LOGGED_IN) {
+			logger.warn("Incorrect username or password");
+			throw new RuntimeException("Incorrect username or password");
+		}
 		
 		if (ftpClient instanceof FTPSClient) {
 			FTPSClient ftpsClient = (FTPSClient) ftpClient;
