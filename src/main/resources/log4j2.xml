@@ -4,13 +4,19 @@
     <Console name="ConsoleAppender" target="SYSTEM_OUT">
       <PatternLayout pattern="%date{DEFAULT} [%threadName] [%-5level] [%logger{36}] - %msg%n%throwable{full}" />
     </Console>
-    <RollingFile name="FileAppender" fileName="logs/current.log" filePattern="logs/old%i.log">
+    <RollingFile name="FileAppender" filePattern="logs/%d{yyyy-MM-dd}.log">
       <PatternLayout pattern="%date{DEFAULT} [%threadName] [%-5level] [%logger{36}] - %msg%n%throwable{full}" />
       <Policies>
-        <SizeBasedTriggeringPolicy size="5 MB" />
+        <TimeBasedTriggeringPolicy />
       </Policies>
-      <DefaultRolloverStrategy fileIndex="min">
-      </DefaultRolloverStrategy>
+      <DirectWriteRolloverStrategy>
+        <Delete basePath="logs">
+          <IfAll>
+            <IfFileName regex="\d{4}-\d{2}-\d{2}\.log" />
+            <IfLastModified age="7D" />
+          </IfAll>
+        </Delete>
+      </DirectWriteRolloverStrategy>
     </RollingFile>
   </Appenders>
   <Loggers>
