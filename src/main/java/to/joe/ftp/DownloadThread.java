@@ -248,6 +248,11 @@ public abstract class DownloadThread extends Thread {
 			logger.error("", e);
 		} finally {
 			cleanup();
+			try {
+				connection.close();
+			} catch (SQLException e) {
+				// Pass
+			}
 		}
 	}
 
