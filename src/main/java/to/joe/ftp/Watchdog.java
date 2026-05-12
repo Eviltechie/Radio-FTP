@@ -94,6 +94,9 @@ public class Watchdog extends Thread {
 		}
 		
 		for (FTPDownloadThread ftpThread : ftpThreads.values()) { // When interrupted, interrupt all other threads.
+			if (ftpThread == null) {
+				continue;
+			}
 			logger.info("Stopping {} FTP thread", ftpThread.getName());
 			ftpThread.interrupt();
 			try {
