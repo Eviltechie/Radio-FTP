@@ -1,0 +1,16 @@
+[Unit]
+Description=Client to automatically transfer files from FTP or a folder.
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=exec
+Restart=always
+RestartSec=5
+User=usernamegoeshere
+WorkingDirectory=/home/usernamegoeshere/radio-ftp/
+ExecStart=java -jar ftp-0.0.1-SNAPSHOT-jar-with-dependencies.jar 
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target
