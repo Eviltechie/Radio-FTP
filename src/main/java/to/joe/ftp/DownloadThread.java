@@ -178,11 +178,11 @@ public abstract class DownloadThread extends Thread {
 						Files.move(tempFile.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING); // Move temp file, replacing existing file if needed.
 					}
 					
-					if (fetcher.getAction().equalsIgnoreCase("move")) {
+					psUpsert.executeUpdate(); // After all other items succeed, we can run the upsert to record the file as processed.
+					
+					if (fetcher.getAction().equalsIgnoreCase("move")) { // Attempt to delete if needed. We run this after so that if deletion fails the file is still recorded as processed.
 						deleteSourceFile(fetcher, pendingFile);
 					}
-					
-					psUpsert.executeUpdate(); // After all other items succeed, we can run the upsert to record the file as processed.
 				} else {
 					logger.info("File {} attributes changed or file missing after re-check, skipping", pendingFile.fileName);
 				}
