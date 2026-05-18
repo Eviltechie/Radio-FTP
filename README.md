@@ -1,3 +1,28 @@
+# Radio FTP
+
+This program was written to solve a problem at a radio station where they needed to automatically get files from two different delivery services into their automation system. One delivery system placed files on a FTP server, while the other provided them on a network share. In both situations there was the additional complication of needing to rename the files a specific way for the automation system. The existing commercial options on the market did not prove suitable due to factors involving flexibility, reliability, and the reliance of running in user space.
+
+This program should also work well for automatically grabbing finished recordings off a Blackmagic HyperDeck.
+
+## Features
+
+* Automatically copy or move files from disk or a FTP server.
+* Regular expressions are used for matching source files, and substitution is supported for the destination filename.
+* A check is made to avoid copying files which are currently being written.
+* Files are only recorded as processed if all steps complete.
+* Can easily be run as a systemd service on Linux.
+* Robust logging.
+
+## How it Works
+
+Each FTP server connection (plus the local filesystem) works in its own thread.
+
+Each thread loops through its list of fetchers. An initial scan of each source directory is made, searching for files which match the associated source regular expression. New files, and files which have changed since last check are noted. A file is considered to be changed if its size or last modified time is different.
+
+After a five second delay, the thread loops through its list of fetchers again. Files are re-checked, and if unchanged since the first check, the file is downloaded to a temporary location. (If the attributes have changed the assumption is the file is still being written and it is not ready to download.) The file is then copied to its final destination, using the associated destination regular expression to perform an optional name substitution. The file name along with the file size and last modified time are then recorded for comparison on next check. Optionally, the source file can be deleted.
+
+The thread then sleeps for a configurable delay before starting the cycle again.
+
 # Configuration
 
 The configuration must be named `config.json` and be in your working directory. If the file does not exist, a sample will be created for you on first run, and then the program will exit.
@@ -25,7 +50,17 @@ For both FTP and local, the `fetchers` is an array of "fetchers", which can loos
 * `destinationPath` - Path to place files after downloading. If running on Windows, you can use forward slashes to avoid nonsense with escaping backslashes.
 * `destinationPattern` - Java regular expression pattern for the destination filename. If you used capture groups in the source pattern you can then use those groups here.
 
+## Advanced Configuration
+
+This program uses log4j2. Logs are written to a logs folder in the working directory. Logs are rotated daily, and retained for 7 days. A custom configuration file can be specified with the `log4j2.configurationFile` system property.
+
+Files are written to a temporary directory as an intermediate step. You can manually set the location with the `java.io.tmpdir` system property. This may be handy if you are downloading large files to a network share, and and want the temporary file to be on the same share.
+
+The .db files which are created for each connection are SQLite databases. To clear the list of downloaded files, stop the program and delete the file. An enterprising user may be able to read these files and display them for users on a website...
+
 # Useful Patterns
+
+Here are a couple useful regular expression patterns. Note that backslashes must be escaped in the config file.
 
 ## Source Patterns
 
@@ -41,10 +76,11 @@ For both FTP and local, the `fetchers` is an array of "fetchers", which can loos
 | SH$1.wav | SH$1.wav | SH12345.wav | Prepends SH to the first capture group. |
 | $0 | $0 | any thing.wav | Returns the file unchanged. |
 
-## Useful Tips
+## Regular Expression Tips
 
 * If you place an `(?i)` at the start of your expression it will be run case insensitive.
 * Placing a `$0` in the destination will return the whole match unchanged, while `$1` will get you the first capture group.
+* Use an online tool to help you build and test. Regex101 offers support for Java regular expressions.
 
 # systemd service file
 
