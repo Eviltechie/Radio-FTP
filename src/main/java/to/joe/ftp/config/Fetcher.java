@@ -18,7 +18,7 @@ public class Fetcher {
 	private String sourcePath = "/";
 	private String destinationPath = "/";
 	
-	private String sourcePattern = ".+\\.wav$";
+	private String sourcePattern = "(?i).+\\.wav$";
 	private String destinationPattern = "$0";
 	
 	/**
