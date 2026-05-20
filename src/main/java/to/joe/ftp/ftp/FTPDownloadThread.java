@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPCmd;
 import org.apache.commons.net.ftp.FTPConnectionClosedException;
@@ -82,6 +83,9 @@ public class FTPDownloadThread extends DownloadThread {
 		}
 		
 		ftpClient.enterLocalPassiveMode();
+		if (!ftpClient.setFileType(FTP.BINARY_FILE_TYPE)) { // If we don't do this, files will likely be downloaded as ASCII, and line endings appearing naturally in the file may be converted, leading to corruption.
+			logger.warn("Server does not support binary mode, files will likely be corrupted.");
+		}
 		ftpClient.features();
 		printLog(ftpClient);
 		
