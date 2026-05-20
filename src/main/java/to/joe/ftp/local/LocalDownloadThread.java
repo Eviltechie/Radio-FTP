@@ -67,19 +67,19 @@ public class LocalDownloadThread extends DownloadThread {
 
 	@Override
 	protected void downloadFile(Fetcher fetcher, QueuedFile pendingFile, File tempFile) throws IOException {
-		FileOutputStream fileOutputStream = new FileOutputStream(tempFile);
-		
-		Instant start = Instant.now();
-		
-		logger.info("Copying file to {}", tempFile.getAbsolutePath());
-		Files.copy(Paths.get(fetcher.getSourcePath(), pendingFile.fileName), fileOutputStream);
-		
-		Instant end = Instant.now();
-		Duration difference = Duration.between(start, end);
-		
-		fileOutputStream.close();
-		
-		logger.info("Copied {} bytes in {}.{} seconds", pendingFile.fileSize, difference.toSeconds(), difference.toMillisPart());
+		try (FileOutputStream fileOutputStream = new FileOutputStream(tempFile)) {
+			Instant start = Instant.now();
+			
+			logger.info("Copying file to {}", tempFile.getAbsolutePath());
+			Files.copy(Paths.get(fetcher.getSourcePath(), pendingFile.fileName), fileOutputStream);
+			
+			Instant end = Instant.now();
+			Duration difference = Duration.between(start, end);
+			
+			fileOutputStream.close();
+			
+			logger.info("Copied {} bytes in {}.{} seconds", pendingFile.fileSize, difference.toSeconds(), difference.toMillisPart());
+		}
 	}
 
 	@Override

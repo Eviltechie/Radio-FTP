@@ -63,6 +63,7 @@ public class FTPDownloadThread extends DownloadThread {
 		if (!FTPReply.isPositiveCompletion(replyCode)) {
 			ftpClient.disconnect();
 			logger.error("FTP server refused connection.");
+			throw new IOException("FTP server refused connection.");
 		}
 		
 		logger.info("Connected to {}", getConfig().getHost());
@@ -72,8 +73,8 @@ public class FTPDownloadThread extends DownloadThread {
 		logger.debug("Reply code {}", replyCode);
 		printLog(ftpClient);
 		if (replyCode == FTPReply.NOT_LOGGED_IN) {
-			logger.warn("Incorrect username or password");
-			throw new RuntimeException("Incorrect username or password");
+			logger.warn("Incorrect username or password.");
+			throw new RuntimeException("Incorrect username or password.");
 		}
 		
 		if (ftpClient instanceof FTPSClient) {
@@ -148,20 +149,22 @@ public class FTPDownloadThread extends DownloadThread {
 
 	@Override
 	protected void downloadFile(Fetcher fetcher, QueuedFile pendingFile, File tempFile) throws IOException {
-		FileOutputStream fileOutputStream = new FileOutputStream(tempFile);
-		
-		Instant start = Instant.now();
-		
-		logger.info("Downloading file to {}", tempFile.getAbsolutePath());
-		getFTPClient().retrieveFile(pendingFile.fileName, fileOutputStream);
-		printLog(ftpClient);
-		
-		Instant end = Instant.now();
-		Duration difference = Duration.between(start, end);
-		
-		fileOutputStream.close();
-		
-		logger.info("Downloaded {} bytes in {}.{} seconds", pendingFile.fileSize, difference.toSeconds(), difference.toMillisPart());
+		try (FileOutputStream fileOutputStream = new FileOutputStream(tempFile)) {
+			Instant start = Instant.now();
+			
+			logger.info("Downloading file to {}", tempFile.getAbsolutePath());
+			if (!getFTPClient().retrieveFile(pendingFile.fileName, fileOutputStream)) {
+				throw new IOException("Error retreiving file");
+			}
+			printLog(ftpClient);
+			
+			Instant end = Instant.now();
+			Duration difference = Duration.between(start, end);
+			
+			fileOutputStream.close();
+			
+			logger.info("Downloaded {} bytes in {}.{} seconds", pendingFile.fileSize, difference.toSeconds(), difference.toMillisPart());
+		}
 	}
 
 	@Override
