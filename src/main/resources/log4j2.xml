@@ -13,7 +13,7 @@
         <Delete basePath="logs">
           <IfAll>
             <IfFileName regex="\d{4}-\d{2}-\d{2}\.log" />
-            <IfLastModified age="7D" />
+            <IfLastModified age="14D" />
           </IfAll>
         </Delete>
       </DirectWriteRolloverStrategy>
