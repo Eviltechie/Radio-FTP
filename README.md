@@ -52,7 +52,7 @@ For both FTP and local, the `fetchers` is an array of "fetchers", which can loos
 
 ## Advanced Configuration
 
-This program uses log4j2. Logs are written to a logs folder in the working directory. Logs are rotated daily, and retained for 7 days. A custom configuration file can be specified with the `log4j2.configurationFile` system property.
+This program uses log4j2. Logs are written to a logs folder in the working directory. Logs are rotated daily, and retained for 14 days. A custom configuration file can be specified with the `log4j2.configurationFile` system property.
 
 Files are written to a temporary directory as an intermediate step. You can manually set the location with the `java.io.tmpdir` system property. This may be handy if you are downloading large files to a network share, and and want the temporary file to be on the same share.
 
