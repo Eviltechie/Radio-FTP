@@ -68,6 +68,7 @@ Here are a couple useful regular expression patterns. Note that backslashes must
 |---|---|---|---|
 | (?i)(\\d{5})\\.wav$ | (?i)(\\\\d{5})\\\\.wav$ | 12345.wav | Five digits in a capture group followed by .wav. (Ideal for PRX or Content Depot.) |
 | (?i).+\\.wav$ | (?i).+\\\\.wav$ | any thing.wav | Matches any .wav file. |
+| (?i)775(?:88|89|90|91)\.wav$ | (?i)775(?:88|89|90|91)\\.wav$ | Matches 77588.wav, 77589.wav, 77590.wav, and 77591.wav. |
 
 ## Destination Patterns
 
